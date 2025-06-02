@@ -21,8 +21,8 @@ public class QueryLog {
     @Id
     private ObjectId id;
 
-    @Field("query")
-    private String query;
+    @Field("key")
+    private String key;
 
     @Field("method_name")
     private String methodName;
@@ -40,13 +40,14 @@ public class QueryLog {
     @Field("duration")
     private long duration;
 
-    public static QueryLog from(QueryLogRequest request) {
+    public static QueryLog from(String key, QueryLogRequest request) {
         return QueryLog.builder()
-                .query(request.getQuery())
+                .key(key)
                 .methodName(request.getMethodName())
                 .sqlQuery(request.getSqlQuery())
                 .executionPlan(request.getExecutionPlan())
                 .duration(request.getDuration())
+                .createdAt(LocalDateTime.now())
                 .build();
     }
 }

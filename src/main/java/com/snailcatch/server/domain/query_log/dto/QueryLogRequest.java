@@ -5,8 +5,6 @@ import lombok.Getter;
 @Getter
 public class QueryLogRequest {
 
-    private String query;
-
     private String methodName;
 
     private String sqlQuery;

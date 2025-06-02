@@ -35,7 +35,6 @@ public class ApiKeyFilter extends OncePerRequestFilter {
             filterChain.doFilter(request, response);
             return;
         }
-
         String key = request.getHeader("X-API-KEY");
 
         if (key == null || !apiKeyService.isValid(key)) {
@@ -43,13 +42,8 @@ public class ApiKeyFilter extends OncePerRequestFilter {
             response.getWriter().write("Invalid or missing API Key");
             return;
         }
-
-        // 인증 객체 생성 (권한이 없다면 빈 리스트, 필요하면 권한 추가)
         Authentication auth = new UsernamePasswordAuthenticationToken(key, null, Collections.emptyList());
-
-        // SecurityContext에 인증 객체 저장
         SecurityContextHolder.getContext().setAuthentication(auth);
-
         filterChain.doFilter(request, response);
     }
 
