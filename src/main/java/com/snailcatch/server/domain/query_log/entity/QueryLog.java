@@ -1,4 +1,4 @@
-package com.snailcatch.server.domain.query_log;
+package com.snailcatch.server.domain.query_log.entity;
 
 import com.snailcatch.server.domain.query_log.dto.QueryLogRequest;
 import lombok.*;

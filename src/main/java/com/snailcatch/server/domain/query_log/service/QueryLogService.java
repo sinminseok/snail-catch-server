@@ -1,6 +1,6 @@
 package com.snailcatch.server.domain.query_log.service;
 
-import com.snailcatch.server.domain.query_log.QueryLog;
+import com.snailcatch.server.domain.query_log.entity.QueryLog;
 import com.snailcatch.server.domain.query_log.dto.QueryLogRequest;
 import com.snailcatch.server.domain.query_log.repository.QueryLogRepository;
 import lombok.RequiredArgsConstructor;

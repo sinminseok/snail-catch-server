@@ -1,6 +1,6 @@
 package com.snailcatch.server.domain.query_log.repository;
 
-import com.snailcatch.server.domain.query_log.QueryLog;
+import com.snailcatch.server.domain.query_log.entity.QueryLog;
 import org.bson.types.ObjectId;
 import org.springframework.data.mongodb.repository.MongoRepository;
 
