@@ -33,3 +33,29 @@ jwt:
   secret: ${SECRET_KEY}
   access-key-expiration-s: ${ACCESS_KEY_EXPIRATION_SECONDS}
   refresh-key-expiration-s: ${REFRESH_KEY_EXPIRATION_SECONDS}
+
+management:
+  metrics:
+    export:
+      otlp:
+        enabled: true
+        endpoint: http://localhost:4317 # OTEL Collector의 gRPC 포트
+    enable:
+      all: true
+      jvm: true
+  endpoints:
+    web:
+      exposure:
+        include: "*"
+    prometheus:
+      enabled: true
+
+
+otel:
+  resource:
+    attributes:
+      service.name: ticketon-service
+  exporter:
+    otlp:
+      endpoint: http://localhost:4317
+      protocol: grpc
