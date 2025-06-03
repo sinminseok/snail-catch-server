@@ -20,7 +20,7 @@ public class QueryLogController {
 
     private final QueryLogService queryLogService;
 
-    @PostMapping()
+    @PostMapping
     public ResponseEntity<?> sendCheckCode(@RequestBody final QueryLogRequest queryLogRequest, @RequestHeader(value = "X-API-KEY", required = false) String apiKey) {
         queryLogService.save(apiKey, queryLogRequest);
         SuccessResponse response = new SuccessResponse(true, "success save query logs", null);

@@ -5,3 +5,7 @@ scrape_configs: # Prometheus 가 어디서 메트릭을 수집할지 설정하�
   - job_name: 'ticketon-service' # Prometheus UI 나 쿼리 결과에 job 라벨로 붙음 ex) process_cpu_usage{job="ticketon-service"}
     static_configs:
       - targets: ['otel-collector:8889'] # 메트릭을 가져올 대상 주소 (같은 도커 내부에서 실행되므로 otel-collector:8889)
+
+  - job_name: 'k6'
+    static_configs:
+      - targets: [ 'host.docker.internal:6565' ]  # host.docker.internal:6565 는 도커 밖에서 실행되는 k6 가 prometheus exporter 모드로 메트릭을 노출하는 포트

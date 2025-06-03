@@ -12,4 +12,5 @@ public class QueryLogRequest {
     private String executionPlan;
 
     private long duration;
+
 }
