@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>Query Logs</title>
+    <meta charset="UTF-8">
+</head>
+<body>
+<h1>Query Logs</h1>
+
+<label for="apiKeyInput">API Key:</label>
+<input type="text" id="apiKeyInput" placeholder="Enter your API Key">
+
+<button onclick="fetchQueryLogs()">Fetch Logs</button>
+
+<ul id="logList"></ul>
+
+<script>
+        function fetchQueryLogs() {
+            const apiKey = document.getElementById("apiKeyInput").value;
+            fetch("/api/query-logs?page=0&size=10", {
+                method: "GET",
+                headers: {
+                    "X-API-KEY": apiKey
+                }
+            })
+            .then(res => {
+                if (!res.ok) throw new Error("API 호출 실패");
+                return res.json();
+            })
+            .then(data => {
+                const logs = data.data || [];
+                const logList = document.getElementById("logList");
+                logList.innerHTML = ""; // 기존 내용 초기화
+
+                logs.forEach(log => {
+                    const li = document.createElement("li");
+                    li.textContent = JSON.stringify(log);
+                    logList.appendChild(li);
+                });
+            })
+            .catch(err => alert(err.message));
+        }
+    </script>
+</body>
+</html>

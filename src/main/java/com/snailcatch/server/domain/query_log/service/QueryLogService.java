@@ -8,6 +8,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
+import java.util.ArrayList;
 import java.util.List;
 
 @Service
@@ -19,6 +20,14 @@ public class QueryLogService {
     public void save(String key, QueryLogRequest queryLogRequest){
         QueryLog queryLog = QueryLog.from(key, queryLogRequest);
         queryLogRepository.save(queryLog);
+    }
+
+    public void saveAll(String key, List<QueryLogRequest> logs) {
+        List<QueryLog> queryLogs = new ArrayList<>();
+        for(QueryLogRequest log : logs){
+            queryLogs.add(QueryLog.from(key, log));
+        }
+        queryLogRepository.saveAll(queryLogs);
     }
 
     public List<QueryLogResponse> findByPage(String key, Pageable pageable){

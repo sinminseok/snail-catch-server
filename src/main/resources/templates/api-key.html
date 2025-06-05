@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Snail Catch REST API KEY</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+</head>
+<body class="bg-gray-100 flex items-center justify-center h-screen">
+<div class="bg-white p-10 rounded-2xl shadow-lg w-full max-w-md text-center">
+    <h1 class="text-2xl font-bold text-gray-800 mb-6">🐌 Snail Catch REST API KEY</h1>
+
+    <button
+            id="generateBtn"
+            class="bg-green-500 hover:bg-green-600 text-white font-semibold py-2 px-4 rounded transition">
+        발급받기
+    </button>
+
+    <div id="result" class="mt-6 text-sm text-gray-700 break-all"></div>
+</div>
+
+<script>
+        document.getElementById('generateBtn').addEventListener('click', async () => {
+            const response = await fetch('/api/key/generate', { method: 'POST' });
+            const data = await response.json();
+            document.getElementById('result').innerText = data.success
+                ? `API KEY: ${data.data}`
+                : `에러: ${data.message}`;
+        });
+    </script>
+</body>
+</html>

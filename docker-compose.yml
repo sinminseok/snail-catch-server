@@ -1,0 +1,40 @@
+version: '3.8'
+
+services:
+  nginx:
+    image: nginx:latest
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx/default.conf:/etc/nginx/conf.d/default.conf
+    depends_on:
+      - app1
+      - app2
+      - app3
+
+  app1:
+    build:
+      context: ./app
+      args:
+        JAR_FILE: app.jar
+    container_name: app1
+    environment:
+      - SPRING_PROFILES_ACTIVE=default
+
+  app2:
+    build:
+      context: ./app
+      args:
+        JAR_FILE: app.jar
+    container_name: app2
+    environment:
+      - SPRING_PROFILES_ACTIVE=default
+
+  app3:
+    build:
+      context: ./app
+      args:
+        JAR_FILE: app.jar
+    container_name: app3
+    environment:
+      - SPRING_PROFILES_ACTIVE=default

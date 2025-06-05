@@ -23,7 +23,6 @@ public class ApiKeyFilter extends OncePerRequestFilter {
         this.apiKeyService = apiKeyService;
     }
 
-
     @Override
     protected void doFilterInternal(HttpServletRequest request,
                                     HttpServletResponse response,
@@ -31,10 +30,16 @@ public class ApiKeyFilter extends OncePerRequestFilter {
             throws ServletException, IOException {
 
         String path = request.getRequestURI();
-        if ("/api/key/generate".equals(path)) {
+
+        if (path.startsWith("/main/api-key") ||
+                path.startsWith("/css") ||
+                path.startsWith("/js") ||
+                path.equals("/favicon.ico") ||
+                path.equals("/api/key/generate") || path.equals("/view/query-logs")) {
             filterChain.doFilter(request, response);
             return;
         }
+
         String key = request.getHeader("X-API-KEY");
 
         if (key == null || !apiKeyService.isValid(key)) {

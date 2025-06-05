@@ -21,11 +21,19 @@ public class QueryLogController {
     private final QueryLogService queryLogService;
 
     @PostMapping
-    public ResponseEntity<?> sendCheckCode(@RequestBody final QueryLogRequest queryLogRequest, @RequestHeader(value = "X-API-KEY", required = false) String apiKey) {
+    public ResponseEntity<?> saveLog(@RequestBody final QueryLogRequest queryLogRequest, @RequestHeader(value = "X-API-KEY", required = false) String apiKey) {
         queryLogService.save(apiKey, queryLogRequest);
+        SuccessResponse response = new SuccessResponse(true, "success save query log", null);
+        return new ResponseEntity<>(response, HttpStatus.OK);
+    }
+
+    @PostMapping("/all")
+    public ResponseEntity<?> saveLogs(@RequestBody final List<QueryLogRequest> queryLogRequest, @RequestHeader(value = "X-API-KEY", required = false) String apiKey) {
+        queryLogService.saveAll(apiKey, queryLogRequest);
         SuccessResponse response = new SuccessResponse(true, "success save query logs", null);
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
+
 
     @GetMapping()
     public ResponseEntity<?> findByPage(

@@ -47,7 +47,7 @@ public class QueryLog {
                 .sqlQuery(request.getSqlQuery())
                 .executionPlan(request.getExecutionPlan())
                 .duration(request.getDuration())
-                .createdAt(LocalDateTime.now())
+                .createdAt(request.getCreatedAt())
                 .build();
     }
 }
