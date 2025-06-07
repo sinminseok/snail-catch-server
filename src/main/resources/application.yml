@@ -14,6 +14,7 @@ spring:
     username: ${DB_USER_NAME}
     password: ${DB_PASSWORD}
     hikari:
+
       maximum-pool-size: 100 # 커넥션 풀에서 동시에 사용할 수 있는 최대 커넥션 수
       minimum-idle: 10 # 최소한으로 풀에 항상 유지할 유휴 커넥션 수
       idle-timeout: 600000 # 유휴 커넥션이 풀에서 제거되기 전 최대 대기 시간 (10분)

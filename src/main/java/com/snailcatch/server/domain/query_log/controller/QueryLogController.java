@@ -2,6 +2,7 @@ package com.snailcatch.server.domain.query_log.controller;
 
 import com.snailcatch.server.domain.query_log.dto.QueryLogRequest;
 import com.snailcatch.server.domain.query_log.dto.QueryLogResponse;
+import com.snailcatch.server.domain.query_log.service.BufferedQueryLogService;
 import com.snailcatch.server.domain.query_log.service.QueryLogService;
 import com.snailcatch.server.utils.SuccessResponse;
 import lombok.RequiredArgsConstructor;
@@ -19,18 +20,20 @@ import java.util.List;
 public class QueryLogController {
 
     private final QueryLogService queryLogService;
+    private final BufferedQueryLogService bufferedQueryLogService;
+
+    @PostMapping("/all")
+    public ResponseEntity<?> saveLogs(@RequestBody final List<QueryLogRequest> queryLogRequest, @RequestHeader(value = "X-API-KEY", required = false) String apiKey) {
+        bufferedQueryLogService.saveBufferedBatch(apiKey, queryLogRequest);
+        SuccessResponse response = new SuccessResponse(true, "success save query logs", null);
+        return new ResponseEntity<>(response, HttpStatus.OK);
+    }
+
 
     @PostMapping
     public ResponseEntity<?> saveLog(@RequestBody final QueryLogRequest queryLogRequest, @RequestHeader(value = "X-API-KEY", required = false) String apiKey) {
         queryLogService.save(apiKey, queryLogRequest);
         SuccessResponse response = new SuccessResponse(true, "success save query log", null);
-        return new ResponseEntity<>(response, HttpStatus.OK);
-    }
-
-    @PostMapping("/all")
-    public ResponseEntity<?> saveLogs(@RequestBody final List<QueryLogRequest> queryLogRequest, @RequestHeader(value = "X-API-KEY", required = false) String apiKey) {
-        queryLogService.saveAll(apiKey, queryLogRequest);
-        SuccessResponse response = new SuccessResponse(true, "success save query logs", null);
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
 
