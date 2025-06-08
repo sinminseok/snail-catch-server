@@ -12,7 +12,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 public class ApiKeyViewController {
 
     @GetMapping("/api-key")
-    public String showApiKeyPage(Model model) {
+    public String showApiKeyPage() {
         return "api-key";
     }
 }

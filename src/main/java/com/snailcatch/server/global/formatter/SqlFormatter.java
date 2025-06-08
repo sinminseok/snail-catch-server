@@ -12,7 +12,6 @@ public class SqlFormatter {
     public static String formatSqls(List<String> sqls) {
         return sqls.stream()
                 .map(SqlFormatter::formatSql)
-                .collect(Collectors.joining("\n\n")); // 두 줄 간격으로 구분
+                .collect(Collectors.joining("\n\n"));
     }
-
 }

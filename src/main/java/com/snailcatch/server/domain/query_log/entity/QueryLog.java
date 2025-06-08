@@ -1,7 +1,7 @@
 package com.snailcatch.server.domain.query_log.entity;
 
 import com.snailcatch.server.domain.query_log.dto.QueryLogRequest;
-import com.snailcatch.server.global.formatter.LogFormatter;
+import com.snailcatch.server.global.formatter.ExecutionPlanFormatter;
 import com.snailcatch.server.global.formatter.SqlFormatter;
 import lombok.*;
 import org.bson.types.ObjectId;
@@ -60,7 +60,7 @@ public class QueryLog {
 
     private static String formattedPlan(List<List<Map<String, String>>> executionPlans) {
         return executionPlans.stream()
-                .map(LogFormatter::formatExplain)
+                .map(ExecutionPlanFormatter::formatExecutionPlan)
                 .collect(Collectors.joining("\n\n"));
     }
 }

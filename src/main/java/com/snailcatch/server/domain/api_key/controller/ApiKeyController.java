@@ -17,7 +17,7 @@ public class ApiKeyController {
     private final ApiKeyService apiKeyService;
 
     @PostMapping("/generate")
-    public ResponseEntity<SuccessResponse> generateKey() {
+    public ResponseEntity<?> generateKey() {
         String key = apiKeyService.generateApiKey();
         SuccessResponse response = new SuccessResponse(true, "Rest API 발급", key);
         return new ResponseEntity<>(response, HttpStatus.OK);

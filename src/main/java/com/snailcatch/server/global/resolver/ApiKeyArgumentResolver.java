@@ -23,7 +23,7 @@ public class ApiKeyArgumentResolver implements HandlerMethodArgumentResolver {
     public Object resolveArgument(MethodParameter parameter,
                                   ModelAndViewContainer mavContainer,
                                   NativeWebRequest webRequest,
-                                  WebDataBinderFactory binderFactory) throws Exception {
+                                  WebDataBinderFactory binderFactory) {
         return webRequest.getHeader(API_KEY_HEADER);
     }
 }

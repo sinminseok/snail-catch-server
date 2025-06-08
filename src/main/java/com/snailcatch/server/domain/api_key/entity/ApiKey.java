@@ -19,12 +19,12 @@ public class ApiKey {
     private Long id;
 
     @Column(name = "`key`", unique = true, nullable = false)
-    @Setter
     private String key;
 
-    @Setter
+    @Column(name = "`created_at`", nullable = false)
     private LocalDateTime createdAt;
 
+    @Column(name = "`revoked`", nullable = false)
     private boolean revoked;
 
     public static ApiKey from(String key) {
