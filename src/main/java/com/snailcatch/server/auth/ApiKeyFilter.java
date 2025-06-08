@@ -13,9 +13,22 @@ import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
 import java.util.Collections;
+import java.util.Set;
 
 @Component
 public class ApiKeyFilter extends OncePerRequestFilter {
+
+    private static final String HEADER_API_KEY = "X-API-KEY";
+
+    private static final Set<String> WHITELIST_PATHS = Set.of(
+            "/main/api-key",
+            "/favicon.ico",
+            "/api/key/generate",
+            "/view/query-logs"
+    );
+
+    private static final String STATIC_RESOURCES_PREFIX_CSS = "/css";
+    private static final String STATIC_RESOURCES_PREFIX_JS = "/js";
 
     private final ApiKeyService apiKeyService;
 
@@ -31,25 +44,27 @@ public class ApiKeyFilter extends OncePerRequestFilter {
 
         String path = request.getRequestURI();
 
-        if (path.startsWith("/main/api-key") ||
-                path.startsWith("/css") ||
-                path.startsWith("/js") ||
-                path.equals("/favicon.ico") ||
-                path.equals("/api/key/generate") || path.equals("/view/query-logs")) {
+        if (isWhitelisted(path)) {
             filterChain.doFilter(request, response);
             return;
         }
 
-        String key = request.getHeader("X-API-KEY");
+        String apiKey = request.getHeader(HEADER_API_KEY);
 
-        if (key == null || !apiKeyService.isValid(key)) {
+        if (apiKey == null || !apiKeyService.isValid(apiKey)) {
             response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
             response.getWriter().write("Invalid or missing API Key");
             return;
         }
-        Authentication auth = new UsernamePasswordAuthenticationToken(key, null, Collections.emptyList());
-        SecurityContextHolder.getContext().setAuthentication(auth);
+
+        Authentication authentication = new UsernamePasswordAuthenticationToken(apiKey, null, Collections.emptyList());
+        SecurityContextHolder.getContext().setAuthentication(authentication);
         filterChain.doFilter(request, response);
     }
 
+    private boolean isWhitelisted(String path) {
+        return WHITELIST_PATHS.contains(path)
+                || path.startsWith(STATIC_RESOURCES_PREFIX_CSS)
+                || path.startsWith(STATIC_RESOURCES_PREFIX_JS);
+    }
 }

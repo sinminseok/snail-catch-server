@@ -2,22 +2,22 @@ package com.snailcatch.server.domain.api_key.service;
 
 import com.snailcatch.server.domain.api_key.entity.ApiKey;
 import com.snailcatch.server.domain.api_key.repository.ApiKeyRepository;
+import com.snailcatch.server.global.utils.ApiKeyGenerator;
 import org.springframework.stereotype.Service;
-
-import java.time.LocalDateTime;
-import java.util.UUID;
 
 @Service
 public class ApiKeyService {
 
     private final ApiKeyRepository apiKeyRepository;
+    private final ApiKeyGenerator apiKeyGenerator;
 
-    public ApiKeyService(ApiKeyRepository apiKeyRepository) {
+    public ApiKeyService(ApiKeyRepository apiKeyRepository, ApiKeyGenerator apiKeyGenerator) {
         this.apiKeyRepository = apiKeyRepository;
+        this.apiKeyGenerator = apiKeyGenerator;
     }
 
     public String generateApiKey() {
-        String key = UUID.randomUUID().toString().replace("-", "");
+        String key = apiKeyGenerator.generate();
         ApiKey apiKey = ApiKey.from(key);
         apiKeyRepository.save(apiKey);
         return key;
@@ -27,4 +27,3 @@ public class ApiKeyService {
         return apiKeyRepository.existsByKeyAndRevokedFalse(key);
     }
 }
-
