@@ -3,43 +3,232 @@
 <head>
     <title>Query Logs</title>
     <meta charset="UTF-8">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap');
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #1e1e2f;
+            color: #e0e0e0;
+            margin: 0;
+        }
+
+        header {
+            display: flex;
+            align-items: center;
+            background-color: #2d2d44;
+            padding: 16px 24px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+        }
+
+        header h1 {
+            margin: 0 0 0 10px;
+            font-size: 24px;
+            font-weight: 600;
+            color: #ffffff;
+        }
+
+        .container {
+            padding: 24px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background-color: #2a2a40;
+            box-shadow: 0 0 10px rgba(0,0,0,0.2);
+            margin-top: 20px;
+            border-radius: 6px;
+            overflow: hidden;
+        }
+
+        thead {
+            background-color: #44446a;
+            color: #ffffff;
+        }
+
+        th, td {
+            padding: 12px 16px;
+            border-bottom: 1px solid #3e3e5c;
+            text-align: left;
+            font-size: 14px;
+            vertical-align: top;
+        }
+
+        tr:hover {
+            background-color: #38385a;
+        }
+
+        .error {
+            color: #ff6b6b;
+            margin-top: 10px;
+        }
+
+        .loading {
+            font-style: italic;
+            color: #aaaaaa;
+            margin-top: 10px;
+        }
+
+        .sql-preview {
+            cursor: pointer;
+            color: #4aa8ff;
+            text-decoration: underline;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            display: inline-block;
+            max-width: 1000px;
+            vertical-align: top;
+        }
+
+        .sql-full, .execution-plan {
+            display: none;
+            background-color: #1a1a2e;
+            padding: 8px;
+            border-radius: 4px;
+            margin-top: 5px;
+            font-family: Consolas, monospace;
+            font-size: 13px;
+            white-space: pre-wrap;
+            word-break: break-word;
+            color: #f1f1f1;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        #apiKeyForm {
+            margin-bottom: 16px;
+        }
+
+        input[type="text"] {
+            padding: 6px 10px;
+            font-size: 14px;
+            background-color: #2d2d44;
+            border: 1px solid #55557a;
+            color: #ffffff;
+            border-radius: 4px;
+        }
+
+        button {
+            padding: 6px 12px;
+            background-color: #4aa8ff;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            margin-left: 8px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+
+        button:hover {
+            background-color: #368cd6;
+        }
+    </style>
 </head>
 <body>
-<h1>Query Logs</h1>
+<header>
+    <span style="font-size: 26px;">🐌</span>
+    <h1>Snail Catch</h1>
+</header>
 
-<label for="apiKeyInput">API Key:</label>
-<input type="text" id="apiKeyInput" placeholder="Enter your API Key">
+<div class="container">
+    <form id="apiKeyForm" onsubmit="setApiKey(event)">
+        <label for="apiKeyInput">API Key:</label>
+        <input type="text" id="apiKeyInput" placeholder="Enter your API key" required>
+        <button type="submit">Load Logs</button>
+    </form>
 
-<button onclick="fetchQueryLogs()">Fetch Logs</button>
+    <div id="status" class="loading">API 키를 입력해주세요.</div>
 
-<ul id="logList"></ul>
+    <table>
+        <thead>
+        <tr>
+            <th>Method</th>
+            <th>SQL Query (click to expand)</th>
+            <th>Duration (ms)</th>
+            <th>Created At</th>
+        </tr>
+        </thead>
+        <tbody id="logTableBody"></tbody>
+    </table>
+</div>
 
 <script>
-        function fetchQueryLogs() {
-            const apiKey = document.getElementById("apiKeyInput").value;
-            fetch("/api/query-logs?page=0&size=10", {
-                method: "GET",
-                headers: {
-                    "X-API-KEY": apiKey
-                }
-            })
-            .then(res => {
-                if (!res.ok) throw new Error("API 호출 실패");
-                return res.json();
-            })
-            .then(data => {
-                const logs = data.data || [];
-                const logList = document.getElementById("logList");
-                logList.innerHTML = ""; // 기존 내용 초기화
+    let apiKey = null;
 
-                logs.forEach(log => {
-                    const li = document.createElement("li");
-                    li.textContent = JSON.stringify(log);
-                    logList.appendChild(li);
-                });
-            })
-            .catch(err => alert(err.message));
+    function setApiKey(event) {
+        event.preventDefault();
+        apiKey = document.getElementById("apiKeyInput").value.trim();
+        fetchQueryLogs();
+    }
+
+    function fetchQueryLogs() {
+        const status = document.getElementById("status");
+        const tbody = document.getElementById("logTableBody");
+        status.textContent = "Loading...";
+        status.className = "loading";
+        tbody.innerHTML = "";
+
+        if (!apiKey) {
+            status.textContent = "API 키를 입력하세요.";
+            status.className = "error";
+            return;
         }
-    </script>
+
+        fetch("/api/query-logs?page=0&size=10", {
+            method: "GET",
+            headers: {
+                "X-API-KEY": apiKey
+            }
+        })
+        .then(res => {
+            if (!res.ok) throw new Error("API 호출 실패");
+            return res.json();
+        })
+        .then(data => {
+            const logs = data.data || [];
+
+            if (logs.length === 0) {
+                status.textContent = "데이터가 없습니다.";
+                return;
+            }
+
+            logs.forEach((log, index) => {
+                const row = document.createElement("tr");
+                const truncatedQuery = log.sqlQuery.length > 100
+                    ? log.sqlQuery.slice(0, 100) + "..."
+                    : log.sqlQuery;
+
+                row.innerHTML = `
+                    <td>${log.methodName}</td>
+                    <td>
+                        <div class="sql-preview" onclick="toggleDetails(${index})">${truncatedQuery}</div>
+                        <div id="sql-full-${index}" class="sql-full">${log.sqlQuery}</div>
+                        <div id="execution-plan-${index}" class="execution-plan">${log.executionPlan}</div>
+                    </td>
+                    <td>${log.duration}</td>
+                    <td>${new Date(log.createdAt).toLocaleString()}</td>
+                `;
+                tbody.appendChild(row);
+            });
+
+            status.textContent = "";
+        })
+        .catch(err => {
+            status.textContent = "에러: " + err.message;
+            status.className = "error";
+        });
+    }
+
+    function toggleDetails(index) {
+        const sqlFull = document.getElementById(`sql-full-${index}`);
+        const execPlan = document.getElementById(`execution-plan-${index}`);
+        const isHidden = sqlFull.style.display === "none" || sqlFull.style.display === "";
+
+        sqlFull.style.display = isHidden ? "block" : "none";
+        execPlan.style.display = isHidden ? "block" : "none";
+    }
+</script>
 </body>
 </html>

@@ -1,12 +1,10 @@
 package com.snailcatch.server.domain.api_key.controller;
 
 import com.snailcatch.server.domain.api_key.service.ApiKeyService;
-import com.snailcatch.server.utils.SuccessResponse;
+import com.snailcatch.server.global.dto.SuccessResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
-import org.springframework.http.HttpStatusCode;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;

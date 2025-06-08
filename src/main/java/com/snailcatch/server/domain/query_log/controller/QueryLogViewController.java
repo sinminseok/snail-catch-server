@@ -1,5 +1,6 @@
 package com.snailcatch.server.domain.query_log.controller;
 
+import com.snailcatch.server.global.annotation.ApiKey;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -9,7 +10,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 public class QueryLogViewController {
 
     @GetMapping("/view/query-logs")
-    public String showQueryLogPage() {
-        return "query-logs"; // templates/query-logs.html
+    public String showQueryLogPage(@ApiKey String apiKey) {
+        return "query-logs";
     }
 }

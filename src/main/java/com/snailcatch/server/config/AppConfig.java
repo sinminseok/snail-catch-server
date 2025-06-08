@@ -6,8 +6,8 @@ import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
 import org.springframework.data.mongodb.repository.config.EnableMongoRepositories;
 
 @Configuration
-@EnableMongoRepositories(basePackages = {"com.snailcatch.server.domain"})
-@EnableJpaRepositories(basePackages = "com.snailcatch.server.domain")
-@EntityScan(basePackages = "com.snailcatch.server.domain")
+@EnableMongoRepositories(basePackages = "com.snailcatch.server.domain.query_log")
+@EnableJpaRepositories(basePackages = "com.snailcatch.server.domain.api_key")
+@EntityScan(basePackages = "com.snailcatch.server.domain.api_key")
 public class AppConfig {
 }

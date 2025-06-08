@@ -2,6 +2,7 @@ package com.snailcatch.server.domain.api_key.controller;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Controller;
+import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 
@@ -11,7 +12,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 public class ApiKeyViewController {
 
     @GetMapping("/api-key")
-    public String showApiKeyPage() {
+    public String showApiKeyPage(Model model) {
         return "api-key";
     }
 }

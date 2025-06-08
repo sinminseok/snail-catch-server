@@ -6,25 +6,26 @@ import { sleep, check } from 'k6';
 
 export const options = {
   scenarios: {
-    constant_rate_test: {
+    find_max_log_throughput: {
       executor: 'constant-arrival-rate',
-      rate: 5000,              // 초당 200건부터 시작
+      rate: 1000, // 초당 요청 수
       timeUnit: '1s',
       duration: '10s',
-      preAllocatedVUs: 100,
+      preAllocatedVUs: 200,
       maxVUs: 1000,
     },
   },
   thresholds: {
-    http_req_failed: ['rate<0.01'],     // 실패율 1% 미만
-    http_req_duration: ['p(95)<3000'],  // 95% 요청 3초 이내 응답
+    http_req_failed: ['rate<0.01'],
+    http_req_duration: ['p(95)<3000'],
   },
 };
+
 
 export default function () {
   const url = 'http://localhost:8080/api/query-logs/all';
 
-  const queries = Array.from({ length: 10 }, (_, i) => ({
+  const queries = Array.from({ length: 100 }, (_, i) => ({
     methodName: `methodName${i}`,
     sqlQuery: `SELECT * FROM table${i}`,
     executionPlan: `executionPlan${i}`,

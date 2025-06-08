@@ -1,4 +1,4 @@
-package com.snailcatch.server.utils;
+package com.snailcatch.server.global.dto;
 
 import lombok.AllArgsConstructor;
 import lombok.Getter;

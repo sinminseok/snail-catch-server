@@ -4,7 +4,6 @@ package com.snailcatch.server.domain.query_log.service;
 
 import com.snailcatch.server.domain.query_log.dto.QueryLogRequest;
 import com.snailcatch.server.domain.query_log.entity.QueryLog;
-import com.snailcatch.server.domain.query_log.repository.QueryLogRepository;
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
