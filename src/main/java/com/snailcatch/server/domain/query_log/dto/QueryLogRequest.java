@@ -11,13 +11,11 @@ public class QueryLogRequest {
 
     private String methodName;
 
-    private List<String> sqlQueries;
+    private String sqlQuery;
 
-    private List<List<Map<String, String>>> executionPlans;
+    private String executionPlan;
 
     private long duration;
 
     private LocalDateTime createdAt;
-
-
 }

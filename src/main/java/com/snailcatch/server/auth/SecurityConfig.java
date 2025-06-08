@@ -6,14 +6,10 @@ import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
+import static com.snailcatch.server.auth.ApiPaths.PUBLIC_ENDPOINTS;
+
 @Configuration
 public class SecurityConfig {
-
-    private static final String[] PUBLIC_ENDPOINTS = {
-            "/api/key/generate",
-            "/main/api-key",
-            "/view/query-logs"
-    };
 
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http, ApiKeyFilter apiKeyFilter) throws Exception {

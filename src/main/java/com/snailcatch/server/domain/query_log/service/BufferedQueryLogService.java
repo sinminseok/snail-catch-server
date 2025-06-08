@@ -1,5 +1,3 @@
-
-
 package com.snailcatch.server.domain.query_log.service;
 
 import com.snailcatch.server.domain.query_log.dto.QueryLogRequest;
@@ -29,11 +27,11 @@ public class BufferedQueryLogService {
         Executors.newSingleThreadExecutor().execute(() -> {
             while (true) {
                 try {
-                    flushBuffer();           // 버퍼 비움
-                    Thread.sleep(1000);      // 1초 대기
+                    flushBuffer(); // 버퍼 비움
+                    Thread.sleep(1000);// 1초 대기
                 } catch (InterruptedException e) {
-                    Thread.currentThread().interrupt(); // 현재 쓰레드 인터럽트 설정
-                    break; // 루프 종료
+                    Thread.currentThread().interrupt();
+                    break;
                 } catch (Exception e) {
                     // flushBuffer에서 발생하는 예외는 로깅하고 루프 계속
                     e.printStackTrace();
@@ -42,11 +40,10 @@ public class BufferedQueryLogService {
         });
     }
 
-    // 다건 로그 요청 처리
     public void saveBufferedBatch(String key, List<QueryLogRequest> requests) {
         for (QueryLogRequest request : requests) {
             QueryLog log = QueryLog.from(key, request);
-            buffer.offer(log); // 큐에 하나씩 적재
+            buffer.offer(log);
         }
     }
 

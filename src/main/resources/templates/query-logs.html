@@ -82,7 +82,7 @@
             vertical-align: top;
         }
 
-        .sql-full, .execution-plan {
+        .sql-full {
             display: none;
             background-color: #1a1a2e;
             padding: 8px;
@@ -95,6 +95,21 @@
             color: #f1f1f1;
             max-height: 300px;
             overflow-y: auto;
+        }
+
+        .execution-plan {
+            display: none;
+            background-color: #1a1a2e;
+            padding: 8px;
+            border-radius: 4px;
+            margin-top: 5px;
+            font-family: Consolas, monospace;
+            font-size: 13px;
+            white-space: pre; /* 줄바꿈 없이 출력 */
+            overflow-x: auto;  /* 가로 스크롤 허용 */
+            overflow-y: auto;
+            color: #f1f1f1;
+            max-height: 300px;
         }
 
         #apiKeyForm {

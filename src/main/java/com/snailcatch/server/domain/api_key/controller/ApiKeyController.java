@@ -10,13 +10,13 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
-@RequestMapping("/api/key")
+@RequestMapping("/api/api-keys")
 @RequiredArgsConstructor
 public class ApiKeyController {
 
     private final ApiKeyService apiKeyService;
 
-    @PostMapping("/generate")
+    @PostMapping
     public ResponseEntity<?> generateKey() {
         String key = apiKeyService.generateApiKey();
         SuccessResponse response = new SuccessResponse(true, "Rest API 발급", key);

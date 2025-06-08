@@ -9,7 +9,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 @RequiredArgsConstructor
 public class QueryLogViewController {
 
-    @GetMapping("/view/query-logs")
+    @GetMapping("/query-logs")
     public String showQueryLogPage(@ApiKey String apiKey) {
         return "query-logs";
     }

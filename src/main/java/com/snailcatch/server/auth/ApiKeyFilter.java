@@ -12,23 +12,15 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.Collections;
-import java.util.Set;
+
+import static com.snailcatch.server.auth.ApiPaths.*;
 
 @Component
 public class ApiKeyFilter extends OncePerRequestFilter {
 
     private static final String HEADER_API_KEY = "X-API-KEY";
-
-    private static final Set<String> WHITELIST_PATHS = Set.of(
-            "/main/api-key",
-            "/favicon.ico",
-            "/api/key/generate",
-            "/view/query-logs"
-    );
-
-    private static final String STATIC_RESOURCES_PREFIX_CSS = "/css";
-    private static final String STATIC_RESOURCES_PREFIX_JS = "/js";
 
     private final ApiKeyService apiKeyService;
 
@@ -37,20 +29,13 @@ public class ApiKeyFilter extends OncePerRequestFilter {
     }
 
     @Override
-    protected void doFilterInternal(HttpServletRequest request,
-                                    HttpServletResponse response,
-                                    FilterChain filterChain)
-            throws ServletException, IOException {
-
+    protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain) throws ServletException, IOException {
         String path = request.getRequestURI();
-
         if (isWhitelisted(path)) {
             filterChain.doFilter(request, response);
             return;
         }
-
         String apiKey = request.getHeader(HEADER_API_KEY);
-
         if (apiKey == null || !apiKeyService.isValid(apiKey)) {
             response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
             response.getWriter().write("Invalid or missing API Key");
@@ -62,8 +47,9 @@ public class ApiKeyFilter extends OncePerRequestFilter {
         filterChain.doFilter(request, response);
     }
 
+
     private boolean isWhitelisted(String path) {
-        return WHITELIST_PATHS.contains(path)
+        return Arrays.asList(PUBLIC_ENDPOINTS).contains(path)
                 || path.startsWith(STATIC_RESOURCES_PREFIX_CSS)
                 || path.startsWith(STATIC_RESOURCES_PREFIX_JS);
     }

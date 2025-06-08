@@ -23,7 +23,7 @@ export const options = {
 
 
 export default function () {
-  const url = 'http://localhost:8080/api/query-logs/all';
+  const url = 'http://localhost:8080/api/query-logs';
 
   const queries = Array.from({ length: 100 }, (_, i) => ({
     methodName: `methodName${i}`,
@@ -37,7 +37,7 @@ export default function () {
   const params = {
     headers: {
       'Content-Type': 'application/json',
-      'X-API-KEY': '3ae32a7910c145d4872f4e5e21c6cb64',
+      'X-API-KEY': '2fc768a7be9b47ae894d0891d251ad48',
     },
   };
 
@@ -47,26 +47,3 @@ export default function () {
     'status is 200': (r) => r.status === 200,
   });
 }
-
-//export default function () {
-//  const url = 'http://localhost:8080/api/query-logs';
-//  const payload = JSON.stringify({
-//    methodName: "methodname",
-//    sqlQuery: "SELECT * FROM table",
-//    executionPlan: "executionPlanexecutionPlan",
-//    duration: 120,
-//  });
-//
-//  const params = {
-//    headers: {
-//      'Content-Type': 'application/json',
-//      'X-API-KEY': '3ae32a7910c145d4872f4e5e21c6cb64',
-//    },
-//  };
-//
-//  let res = http.post(url, payload, params);
-//
-//  check(res, {
-//    'status is 200': (r) => r.status === 200,
-//  });
-//}

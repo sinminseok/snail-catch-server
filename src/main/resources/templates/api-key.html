@@ -20,7 +20,7 @@
 
 <script>
         document.getElementById('generateBtn').addEventListener('click', async () => {
-            const response = await fetch('/api/key/generate', { method: 'POST' });
+            const response = await fetch('/api/api-keys', { method: 'POST' });
             const data = await response.json();
             document.getElementById('result').innerText = data.success
                 ? `API KEY: ${data.data}`
