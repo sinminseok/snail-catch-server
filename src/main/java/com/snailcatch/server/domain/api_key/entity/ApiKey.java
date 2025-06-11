@@ -24,6 +24,7 @@ public class ApiKey {
     @Column(name = "`created_at`", nullable = false)
     private LocalDateTime createdAt;
 
+    @Setter
     @Column(name = "`revoked`", nullable = false)
     private boolean revoked;
 

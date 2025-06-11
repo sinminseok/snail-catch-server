@@ -11,63 +11,66 @@ import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.Executors;
-import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.*;
 
 @Service
 @RequiredArgsConstructor
 public class BufferedQueryLogService {
     @Autowired
     private MongoTemplate mongoTemplate;
-    private final BlockingQueue<QueryLog> buffer = new LinkedBlockingQueue<>(10000); // 최대 1만건 버퍼
+
+    private final BlockingQueue<QueryLog> buffer = new LinkedBlockingQueue<>(9_000_000);
+    private static final int BATCH_SIZE = 5000;
+    private static final int CONSUMER_COUNT = 36; // 병렬 Consumer 수
 
     @PostConstruct
     public void init() {
-        Executors.newSingleThreadExecutor().execute(() -> {
-            while (true) {
-                try {
-                    flushBuffer(); // 버퍼 비움
-                    Thread.sleep(1000);// 1초 대기
-                } catch (InterruptedException e) {
-                    Thread.currentThread().interrupt();
-                    break;
-                } catch (Exception e) {
-                    // flushBuffer에서 발생하는 예외는 로깅하고 루프 계속
-                    e.printStackTrace();
+        ExecutorService executor = Executors.newFixedThreadPool(CONSUMER_COUNT);
+        for (int i = 0; i < CONSUMER_COUNT; i++) {
+            executor.submit(this::consumeLogs);
+        }
+    }
+
+    private void consumeLogs() {
+        List<QueryLog> batch = new ArrayList<>(BATCH_SIZE);
+        while (true) {
+            try {
+                QueryLog log = buffer.take(); // 대기 (blocking) cpu 가 안 돌면서 대기함
+                batch.add(log);
+                buffer.drainTo(batch, BATCH_SIZE - 1); // take 한 거 외에 최대 BATCH_SIZE-1개 추가
+
+                if (!batch.isEmpty()) {
+                    saveLogsAsync(new ArrayList<>(batch)); // 복사본 전달
+                    batch.clear(); // 재사용
                 }
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                break;
+            } catch (Exception e) {
+                e.printStackTrace();
+                batch.clear(); // 에러 시 버리고 다시 시작
             }
-        });
+        }
     }
 
     public void saveBufferedBatch(String key, List<QueryLogRequest> requests) {
         for (QueryLogRequest request : requests) {
             QueryLog log = QueryLog.from(key, request);
-            buffer.offer(log);
+            boolean added = buffer.offer(log);
+            if (!added) {
+                System.err.println("Buffer full, dropping log: " + log);
+                //todo 버려진 로그에 대한 처리
+            }
         }
     }
 
-    // 큐에서 꺼내서 DB에 저장 요청 (비동기 메서드 호출)
-    private void flushBuffer() {
-        List<QueryLog> batch = new ArrayList<>();
-        buffer.drainTo(batch, 1000); // 최대 1000건까지 비움
-        if (!batch.isEmpty()) {
-            saveLogsAsync(batch);
-        }
-    }
-
-    // 실제 DB 저장은 비동기로 처리
-    @Async
+    @Async("queryLogExecutor")
     public void saveLogsAsync(List<QueryLog> logs) {
         try {
             mongoTemplate.insert(logs, QueryLog.class);
         } catch (Exception e) {
+            System.err.println("Error saving logs: " + e.getMessage());
             e.printStackTrace();
         }
     }
 }
-
-
-
-
-

@@ -13,6 +13,8 @@ import java.time.LocalDateTime;
 @AllArgsConstructor
 public class QueryLogResponse {
 
+    private String id;
+
     private String methodName;
 
     private String sqlQuery;

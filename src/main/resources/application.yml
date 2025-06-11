@@ -54,17 +54,16 @@ management:
     export:
       otlp:
         enabled: true
-        endpoint: http://localhost:4317 # OTEL Collector의 gRPC 포트
+        endpoint: http://localhost:4317
     enable:
       all: true
-      jvm: false
+      jvm: true
   endpoints:
     web:
       exposure:
         include: "*"
     prometheus:
       enabled: true
-
 
 
 otel:

@@ -48,6 +48,7 @@ bootRun.dependsOn("copyAgent")
 dependencies {
 	agent 'io.opentelemetry.javaagent:opentelemetry-javaagent:2.7.0'
 	implementation 'io.lettuce:lettuce-core'
+	implementation 'io.micrometer:micrometer-core'
 	implementation 'io.opentelemetry:opentelemetry-api:1.50.0'
 	implementation 'io.opentelemetry:opentelemetry-sdk:1.50.0'
 	implementation 'io.opentelemetry:opentelemetry-exporter-otlp:1.50.0'
