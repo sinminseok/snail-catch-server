@@ -10,8 +10,18 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      -
       - name: Checkout code
         uses: actions/checkout@v3
+
+      - name: Test SSH connection
+        uses: appleboy/ssh-action@v0.1.7
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USER }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          script: |
+            echo "SSH 연결 성공"
 
       - name: Log in to Docker Hub
         uses: docker/login-action@v2
@@ -42,8 +52,8 @@ jobs:
           host: ${{ secrets.EC2_HOST }}
           username: ${{ secrets.EC2_USER }}
           key: ${{ secrets.EC2_SSH_KEY }}
-          source: ".env"
-          target: "/home/ec2-user/your-deploy-folder"
+          source: ./.env
+          target: /home/ubuntu/
 
   deploy-to-ec2:
     needs: build-and-push
