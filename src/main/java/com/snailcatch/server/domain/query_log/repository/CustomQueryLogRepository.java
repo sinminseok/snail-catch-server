@@ -1,9 +1,9 @@
 package com.snailcatch.server.domain.query_log.repository;
 
-import com.snailcatch.server.domain.query_log.dto.QueryLogResponse;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
+import com.snailcatch.server.domain.query_log.dto.QueryLogCursorResponse;
+
+import java.time.LocalDateTime;
 
 public interface CustomQueryLogRepository {
-    Page<QueryLogResponse> findLogsByPageable(String key, Pageable pageable);
+    QueryLogCursorResponse findLogsByCursor(String key, LocalDateTime cursorCreatedAt, int size);
 }

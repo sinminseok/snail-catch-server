@@ -1,5 +1,7 @@
 package com.snailcatch.server.domain.query_log.controller;
 
+import com.snailcatch.server.domain.query_log.dto.QueryLogCursorRequest;
+import com.snailcatch.server.domain.query_log.dto.QueryLogCursorResponse;
 import com.snailcatch.server.domain.query_log.dto.QueryLogRequest;
 import com.snailcatch.server.domain.query_log.dto.QueryLogResponse;
 import com.snailcatch.server.domain.query_log.service.BufferedQueryLogService;
@@ -31,19 +33,18 @@ public class QueryLogController {
     @PostMapping
     public ResponseEntity<?> saveLogs(@RequestBody final List<QueryLogRequest> queryLogRequest, @ApiKey String apiKey) {
         bufferedQueryLogService.saveBufferedBatch(apiKey, queryLogRequest);
-        SuccessResponse response = new SuccessResponse(true, "success save query logs", null);
+        SuccessResponse response = new SuccessResponse(true, "쿼리 로그 저장 성공", null);
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
 
-
-
-    @GetMapping
-    public ResponseEntity<?> findByPage(@RequestParam(defaultValue = "0") int page, @RequestParam(defaultValue = "15") int size, @ApiKey String apiKey) {
-        queryLogService.testCount();
-        Pageable pageable = PageRequest.of(page, size);
-        Page<QueryLogResponse> result = queryLogService.findByPage(apiKey, pageable);
-        PaginationResponse<QueryLogResponse> paginationResponse = PaginationResponse.of(result);
-        SuccessResponse response = new SuccessResponse(true, "쿼리 페이징 조회", paginationResponse);
+    @GetMapping("/cursor")
+    public ResponseEntity<?> findByCursor(
+            @RequestParam(required = false) String cursorCreatedAt,
+            @RequestParam(defaultValue = "15") int size,
+            @ApiKey String apiKey
+    ) {
+        QueryLogCursorResponse byCursor = queryLogService.findByCursor(apiKey, cursorCreatedAt, size);
+        SuccessResponse response = new SuccessResponse(true, "커서 기반 쿼리 로그 조회", byCursor);
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
 

@@ -22,15 +22,25 @@ export const options = {
 };
 
 
+function formatDate(date) {
+  return date.toISOString();
+}
+
 export default function () {
   const url = 'http://localhost:8080/api/query-logs';
 
-  const queries = Array.from({ length: 100 }, (_, i) => ({
-    methodName: `methodName${i}`,
-    sqlQuery: `SELECT * FROM table${i}`,
-    executionPlan: `executionPlan${i}`,
-    duration: Math.floor(Math.random() * 1000), // 0 ~ 999 랜덤 duration
-  }));
+  const now = new Date();
+
+  const queries = Array.from({ length: 100 }, (_, i) => {
+    const createdAt = new Date(now.getTime() + i * 1000); // 1초씩 증가
+    return {
+      methodName: `methodName${i}`,
+      createdAt: formatDate(createdAt),
+      sqlQuery: `SELECT * FROM table${i}`,
+      executionPlan: `executionPlan${i}`,
+      duration: Math.floor(Math.random() * 1000),
+    };
+  });
 
   const payload = JSON.stringify(queries);
 

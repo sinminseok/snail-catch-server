@@ -1,12 +1,13 @@
 package com.snailcatch.server.domain.query_log.service;
 
-import com.snailcatch.server.domain.query_log.dto.QueryLogResponse;
+import com.snailcatch.server.domain.query_log.dto.QueryLogCursorResponse;
 import com.snailcatch.server.domain.query_log.repository.QueryLogRepository;
 import lombok.RequiredArgsConstructor;
 import org.bson.types.ObjectId;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
+
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 
 
 @Service
@@ -15,12 +16,12 @@ public class QueryLogService {
 
     private final QueryLogRepository queryLogRepository;
 
-    public Page<QueryLogResponse> findByPage(final String key, final Pageable pageable) {
-        return queryLogRepository.findLogsByPageable(key, pageable);
-    }
-
-    public void testCount(){
-        System.out.println("COUNTTT =" + queryLogRepository.count());
+    public QueryLogCursorResponse findByCursor(String key, String cursorCreatedAt, int size) {
+        LocalDateTime cursorTime = null;
+        if (cursorCreatedAt != null && !cursorCreatedAt.isBlank()) {
+            cursorTime = LocalDateTime.parse(cursorCreatedAt, DateTimeFormatter.ISO_DATE_TIME);
+        }
+        return queryLogRepository.findLogsByCursor(key, cursorTime, size);
     }
 
     public void delete(final ObjectId logId) {

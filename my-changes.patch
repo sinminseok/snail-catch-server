@@ -1,0 +1,1223 @@
+diff --git a/docker-compose.yml b/docker-compose.yml
+index f717ade..c6c12c1 100644
+--- a/docker-compose.yml
++++ b/docker-compose.yml
+@@ -66,5 +66,6 @@ services:
+       - snail-app-1
+       - snail-app-2
+ 
++
+ volumes:
+   mysql-data:
+diff --git a/k6/log_search_test.js b/k6/log_search_test.js
+index 5de5e4c..994feb7 100644
+--- a/k6/log_search_test.js
++++ b/k6/log_search_test.js
+@@ -2,22 +2,29 @@ import http from 'k6/http';
+ import { check, sleep } from 'k6';
+ 
+ export const options = {
+-  vus: 50, // 동시에 실행할 가상 유저 수 (Virtual Users)
+-  duration: '30s', // 테스트 시간
+-  thresholds: {
+-    http_req_duration: ['p(95)<500'], // 95% 요청은 500ms 이하로 완료되어야 함
+-    http_req_failed: ['rate<0.01'], // 실패율은 1% 미만이어야 함
+-  },
++  vus: 50,
++  duration: '30s',
+ };
+ 
+ const BASE_URL = 'http://localhost:8080';
++const apiKey = 'c4db0348054449be9ee75da4e8d98729';
++
++function randomDateISOString() {
++  // 현재시간 기준으로 최대 10분 전~ 현재 사이 랜덤 날짜 생성 (예시)
++  const now = new Date();
++  const past = new Date(now.getTime() - 10 * 60 * 1000); // 10분 전
++  const randomTimestamp = past.getTime() + Math.random() * (now.getTime() - past.getTime());
++  const randomDate = new Date(randomTimestamp);
++  return randomDate.toISOString(); // ISO8601, UTC 기준 시간 포함 (ex: 2025-06-11T02:50:04.282Z)
++}
+ 
+ export default function () {
+-  const page = Math.floor(Math.random() * 10); // 0~9 랜덤 페이지
+-  const size = 15;
+-  const apiKey = 'test-api-key'; // 필요 시 유효한 API 키로 대체하세요
++  const cursorCreatedAt = randomDateISOString();
++  const size = 10;
++
++  const url = `${BASE_URL}/api/query-logs/cursor?cursorCreatedAt=${encodeURIComponent(cursorCreatedAt)}&size=${size}`;
+ 
+-  const res = http.get(`${BASE_URL}/api/query-logs?page=${page}&size=${size}`, {
++  const res = http.get(url, {
+     headers: {
+       'x-api-key': apiKey,
+     },
+@@ -28,5 +35,7 @@ export default function () {
+     'response time < 500ms': (r) => r.timings.duration < 500,
+   });
+ 
+-  sleep(1); // 다음 요청 전 1초 대기
+-}
+\ No newline at end of file
++
++}
++
++
+diff --git a/k6/query_test.js b/k6/query_test.js
+index 46767fb..8516160 100644
+--- a/k6/query_test.js
++++ b/k6/query_test.js
+@@ -22,15 +22,25 @@ export const options = {
+ };
+ 
+ 
++function formatDate(date) {
++  return date.toISOString();
++}
++
+ export default function () {
+   const url = 'http://localhost:8080/api/query-logs';
+ 
+-  const queries = Array.from({ length: 100 }, (_, i) => ({
+-    methodName: `methodName${i}`,
+-    sqlQuery: `SELECT * FROM table${i}`,
+-    executionPlan: `executionPlan${i}`,
+-    duration: Math.floor(Math.random() * 1000), // 0 ~ 999 랜덤 duration
+-  }));
++  const now = new Date();
++
++  const queries = Array.from({ length: 100 }, (_, i) => {
++    const createdAt = new Date(now.getTime() + i * 1000); // 1초씩 증가
++    return {
++      methodName: `methodName${i}`,
++      createdAt: formatDate(createdAt),
++      sqlQuery: `SELECT * FROM table${i}`,
++      executionPlan: `executionPlan${i}`,
++      duration: Math.floor(Math.random() * 1000),
++    };
++  });
+ 
+   const payload = JSON.stringify(queries);
+ 
+diff --git a/src/main/java/com/snailcatch/server/domain/query_log/controller/QueryLogController.java b/src/main/java/com/snailcatch/server/domain/query_log/controller/QueryLogController.java
+index c9e344e..10ebfdb 100644
+--- a/src/main/java/com/snailcatch/server/domain/query_log/controller/QueryLogController.java
++++ b/src/main/java/com/snailcatch/server/domain/query_log/controller/QueryLogController.java
+@@ -1,5 +1,7 @@
+ package com.snailcatch.server.domain.query_log.controller;
+ 
++import com.snailcatch.server.domain.query_log.dto.QueryLogCursorRequest;
++import com.snailcatch.server.domain.query_log.dto.QueryLogCursorResponse;
+ import com.snailcatch.server.domain.query_log.dto.QueryLogRequest;
+ import com.snailcatch.server.domain.query_log.dto.QueryLogResponse;
+ import com.snailcatch.server.domain.query_log.service.BufferedQueryLogService;
+@@ -31,19 +33,18 @@ public class QueryLogController {
+     @PostMapping
+     public ResponseEntity<?> saveLogs(@RequestBody final List<QueryLogRequest> queryLogRequest, @ApiKey String apiKey) {
+         bufferedQueryLogService.saveBufferedBatch(apiKey, queryLogRequest);
+-        SuccessResponse response = new SuccessResponse(true, "success save query logs", null);
++        SuccessResponse response = new SuccessResponse(true, "쿼리 로그 저장 성공", null);
+         return new ResponseEntity<>(response, HttpStatus.OK);
+     }
+ 
+-
+-
+-    @GetMapping
+-    public ResponseEntity<?> findByPage(@RequestParam(defaultValue = "0") int page, @RequestParam(defaultValue = "15") int size, @ApiKey String apiKey) {
+-        queryLogService.testCount();
+-        Pageable pageable = PageRequest.of(page, size);
+-        Page<QueryLogResponse> result = queryLogService.findByPage(apiKey, pageable);
+-        PaginationResponse<QueryLogResponse> paginationResponse = PaginationResponse.of(result);
+-        SuccessResponse response = new SuccessResponse(true, "쿼리 페이징 조회", paginationResponse);
++    @GetMapping("/cursor")
++    public ResponseEntity<?> findByCursor(
++            @RequestParam(required = false) String cursorCreatedAt,
++            @RequestParam(defaultValue = "15") int size,
++            @ApiKey String apiKey
++    ) {
++        QueryLogCursorResponse byCursor = queryLogService.findByCursor(apiKey, cursorCreatedAt, size);
++        SuccessResponse response = new SuccessResponse(true, "커서 기반 쿼리 로그 조회", byCursor);
+         return new ResponseEntity<>(response, HttpStatus.OK);
+     }
+ 
+diff --git a/src/main/java/com/snailcatch/server/domain/query_log/dto/QueryLogCursorRequest.java b/src/main/java/com/snailcatch/server/domain/query_log/dto/QueryLogCursorRequest.java
+index f85eb2b..3ec9bf5 100644
+--- a/src/main/java/com/snailcatch/server/domain/query_log/dto/QueryLogCursorRequest.java
++++ b/src/main/java/com/snailcatch/server/domain/query_log/dto/QueryLogCursorRequest.java
+@@ -1,2 +1,6 @@
+-package com.snailcatch.server.domain.query_log.dto;public class QueryLogCursorRequest {
+-}
++package com.snailcatch.server.domain.query_log.dto;
++
++import java.time.LocalDateTime;
++
++public record QueryLogCursorRequest(String key, LocalDateTime cursorCreatedAt, int size) {}
++
+diff --git a/src/main/java/com/snailcatch/server/domain/query_log/dto/QueryLogCursorResponse.java b/src/main/java/com/snailcatch/server/domain/query_log/dto/QueryLogCursorResponse.java
+index 20845e3..7c61801 100644
+--- a/src/main/java/com/snailcatch/server/domain/query_log/dto/QueryLogCursorResponse.java
++++ b/src/main/java/com/snailcatch/server/domain/query_log/dto/QueryLogCursorResponse.java
+@@ -1,2 +1,10 @@
+-package com.snailcatch.server.domain.query_log.dto;public class QueryLogCursorResponse {
+-}
++package com.snailcatch.server.domain.query_log.dto;
++
++import java.time.LocalDateTime;
++import java.util.List;
++
++public record QueryLogCursorResponse(
++        List<QueryLogResponse> logs,
++        boolean hasNext,
++        LocalDateTime nextCursorCreatedAt
++) {}
+\ No newline at end of file
+diff --git a/src/main/java/com/snailcatch/server/domain/query_log/dto/QueryLogRequest.java b/src/main/java/com/snailcatch/server/domain/query_log/dto/QueryLogRequest.java
+index e949076..7fbc638 100644
+--- a/src/main/java/com/snailcatch/server/domain/query_log/dto/QueryLogRequest.java
++++ b/src/main/java/com/snailcatch/server/domain/query_log/dto/QueryLogRequest.java
+@@ -3,8 +3,6 @@ package com.snailcatch.server.domain.query_log.dto;
+ import lombok.Getter;
+ 
+ import java.time.LocalDateTime;
+-import java.util.List;
+-import java.util.Map;
+ 
+ @Getter
+ public class QueryLogRequest {
+diff --git a/src/main/java/com/snailcatch/server/domain/query_log/entity/QueryLog.java b/src/main/java/com/snailcatch/server/domain/query_log/entity/QueryLog.java
+index c16bf6d..186c160 100644
+--- a/src/main/java/com/snailcatch/server/domain/query_log/entity/QueryLog.java
++++ b/src/main/java/com/snailcatch/server/domain/query_log/entity/QueryLog.java
+@@ -5,6 +5,7 @@ import lombok.*;
+ import org.bson.types.ObjectId;
+ import org.springframework.data.annotation.CreatedDate;
+ import org.springframework.data.annotation.Id;
++import org.springframework.data.mongodb.core.index.CompoundIndex;
+ import org.springframework.data.mongodb.core.mapping.Document;
+ import org.springframework.data.mongodb.core.mapping.Field;
+ 
+@@ -15,6 +16,7 @@ import java.time.LocalDateTime;
+ @AllArgsConstructor
+ @NoArgsConstructor
+ @Document(collection = "query_log")
++@CompoundIndex(def = "{'key': 1, 'created_at': -1}", name = "key_createdAt_idx")
+ public class QueryLog {
+ 
+     @Id
+diff --git a/src/main/java/com/snailcatch/server/domain/query_log/repository/CustomQueryLogRepository.java b/src/main/java/com/snailcatch/server/domain/query_log/repository/CustomQueryLogRepository.java
+index 00d1255..019c8e3 100644
+--- a/src/main/java/com/snailcatch/server/domain/query_log/repository/CustomQueryLogRepository.java
++++ b/src/main/java/com/snailcatch/server/domain/query_log/repository/CustomQueryLogRepository.java
+@@ -1,9 +1,9 @@
+ package com.snailcatch.server.domain.query_log.repository;
+ 
+-import com.snailcatch.server.domain.query_log.dto.QueryLogResponse;
+-import org.springframework.data.domain.Page;
+-import org.springframework.data.domain.Pageable;
++import com.snailcatch.server.domain.query_log.dto.QueryLogCursorResponse;
++
++import java.time.LocalDateTime;
+ 
+ public interface CustomQueryLogRepository {
+-    Page<QueryLogResponse> findLogsByPageable(String key, Pageable pageable);
++    QueryLogCursorResponse findLogsByCursor(String key, LocalDateTime cursorCreatedAt, int size);
+ }
+diff --git a/src/main/java/com/snailcatch/server/domain/query_log/repository/QueryLogRepository.java b/src/main/java/com/snailcatch/server/domain/query_log/repository/QueryLogRepository.java
+index 711f593..0d432bc 100644
+--- a/src/main/java/com/snailcatch/server/domain/query_log/repository/QueryLogRepository.java
++++ b/src/main/java/com/snailcatch/server/domain/query_log/repository/QueryLogRepository.java
+@@ -5,5 +5,4 @@ import org.bson.types.ObjectId;
+ import org.springframework.data.mongodb.repository.MongoRepository;
+ 
+ public interface QueryLogRepository  extends MongoRepository<QueryLog, ObjectId>, CustomQueryLogRepository {
+-    long count();
+ }
+diff --git a/src/main/java/com/snailcatch/server/domain/query_log/repository/impl/CustomQueryLogRepositoryImpl.java b/src/main/java/com/snailcatch/server/domain/query_log/repository/impl/CustomQueryLogRepositoryImpl.java
+index 69f23ba..bca3281 100644
+--- a/src/main/java/com/snailcatch/server/domain/query_log/repository/impl/CustomQueryLogRepositoryImpl.java
++++ b/src/main/java/com/snailcatch/server/domain/query_log/repository/impl/CustomQueryLogRepositoryImpl.java
+@@ -1,18 +1,19 @@
+ package com.snailcatch.server.domain.query_log.repository.impl;
+ 
++import com.snailcatch.server.domain.query_log.dto.QueryLogCursorResponse;
+ import com.snailcatch.server.domain.query_log.dto.QueryLogResponse;
+ import com.snailcatch.server.domain.query_log.entity.QueryLog;
+ import com.snailcatch.server.domain.query_log.repository.CustomQueryLogRepository;
+ import lombok.RequiredArgsConstructor;
+-import org.springframework.data.domain.Page;
+-import org.springframework.data.domain.PageImpl;
+-import org.springframework.data.domain.Pageable;
+ import org.springframework.data.domain.Sort;
+ import org.springframework.data.mongodb.core.MongoTemplate;
+ import org.springframework.data.mongodb.core.query.Criteria;
+ import org.springframework.data.mongodb.core.query.Query;
+ import org.springframework.stereotype.Repository;
+ 
++import java.time.LocalDateTime;
++import java.time.ZoneOffset;
++import java.util.Date;
+ import java.util.List;
+ 
+ @Repository
+@@ -22,15 +23,24 @@ public class CustomQueryLogRepositoryImpl implements CustomQueryLogRepository {
+     private final MongoTemplate mongoTemplate;
+ 
+     @Override
+-    public Page<QueryLogResponse> findLogsByPageable(String key, Pageable pageable) {
++    public QueryLogCursorResponse findLogsByCursor(String key, LocalDateTime cursorCreatedAt, int size) {
++        Criteria criteria = Criteria.where("key").is(key);
++
++        if (cursorCreatedAt != null) {
++            Date cursorCreatedAtDate = Date.from(cursorCreatedAt.toInstant(ZoneOffset.UTC));
++            criteria = criteria.and("created_at").lt(cursorCreatedAtDate);
++        }
++
+         Query query = new Query()
+-                .addCriteria(Criteria.where("key").is(key))
+-                .with(pageable)
+-                .with(Sort.by(Sort.Direction.DESC, "created_at"));
++                .addCriteria(criteria)
++                .with(Sort.by(Sort.Direction.DESC, "created_at"))
++                .limit(size + 1);
+ 
+         List<QueryLog> logs = mongoTemplate.find(query, QueryLog.class);
+-
+-        long total = mongoTemplate.count(Query.of(query).limit(-1).skip(-1), QueryLog.class); // 전체 카운트
++        boolean hasNext = logs.size() > size;
++        if (hasNext) {
++            logs.remove(size);
++        }
+ 
+         List<QueryLogResponse> content = logs.stream()
+                 .map(log -> QueryLogResponse.builder()
+@@ -43,7 +53,11 @@ public class CustomQueryLogRepositoryImpl implements CustomQueryLogRepository {
+                         .build())
+                 .toList();
+ 
+-        return new PageImpl<>(content, pageable, total); // Page 객체로 래핑
++        LocalDateTime nextCursor = hasNext
++                ? logs.get(logs.size() - 1).getCreatedAt()
++                : null;
++
++        return new QueryLogCursorResponse(content, hasNext, nextCursor);
+     }
+ 
+ }
+diff --git a/src/main/java/com/snailcatch/server/domain/query_log/service/QueryLogService.java b/src/main/java/com/snailcatch/server/domain/query_log/service/QueryLogService.java
+index 3b389d8..1c795b7 100644
+--- a/src/main/java/com/snailcatch/server/domain/query_log/service/QueryLogService.java
++++ b/src/main/java/com/snailcatch/server/domain/query_log/service/QueryLogService.java
+@@ -1,13 +1,14 @@
+ package com.snailcatch.server.domain.query_log.service;
+ 
+-import com.snailcatch.server.domain.query_log.dto.QueryLogResponse;
++import com.snailcatch.server.domain.query_log.dto.QueryLogCursorResponse;
+ import com.snailcatch.server.domain.query_log.repository.QueryLogRepository;
+ import lombok.RequiredArgsConstructor;
+ import org.bson.types.ObjectId;
+-import org.springframework.data.domain.Page;
+-import org.springframework.data.domain.Pageable;
+ import org.springframework.stereotype.Service;
+ 
++import java.time.LocalDateTime;
++import java.time.format.DateTimeFormatter;
++
+ 
+ @Service
+ @RequiredArgsConstructor
+@@ -15,12 +16,12 @@ public class QueryLogService {
+ 
+     private final QueryLogRepository queryLogRepository;
+ 
+-    public Page<QueryLogResponse> findByPage(final String key, final Pageable pageable) {
+-        return queryLogRepository.findLogsByPageable(key, pageable);
+-    }
+-
+-    public void testCount(){
+-        System.out.println("COUNTTT =" + queryLogRepository.count());
++    public QueryLogCursorResponse findByCursor(String key, String cursorCreatedAt, int size) {
++        LocalDateTime cursorTime = null;
++        if (cursorCreatedAt != null && !cursorCreatedAt.isBlank()) {
++            cursorTime = LocalDateTime.parse(cursorCreatedAt, DateTimeFormatter.ISO_DATE_TIME);
++        }
++        return queryLogRepository.findLogsByCursor(key, cursorTime, size);
+     }
+ 
+     public void delete(final ObjectId logId) {
+diff --git a/src/main/resources/application.yml b/src/main/resources/application.yml
+index f0808e3..1b3a993 100644
+--- a/src/main/resources/application.yml
++++ b/src/main/resources/application.yml
+@@ -43,6 +43,7 @@ spring:
+     mongodb:
+       uri: ${MONGO_DB_URL}
+       database: ${MONGO_DB_NAME}
++      auto-index-creation: true
+ 
+ jwt:
+   secret: ${SECRET_KEY}
+diff --git a/src/main/resources/templates/api-key.html b/src/main/resources/templates/api-key.html
+index 90c44d2..c80b80e 100644
+--- a/src/main/resources/templates/api-key.html
++++ b/src/main/resources/templates/api-key.html
+@@ -1,8 +1,8 @@
+ <!DOCTYPE html>
+-<html xmlns:th="http://www.thymeleaf.org" lang="ko">
++<html xmlns:th="http://www.thymeleaf.org" lang="en">
+ <head>
+     <meta charset="UTF-8">
+-    <title>Snail Catch REST API KEY</title>
++    <title>Snail Catch REST API Key</title>
+     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+     <link href="https://fonts.googleapis.com/css2?family=Roboto+Mono&display=swap" rel="stylesheet">
+     <style>
+@@ -18,7 +18,7 @@
+     <button
+             id="generateBtn"
+             class="bg-green-600 hover:bg-green-500 text-white font-semibold py-3 px-6 rounded-md shadow-md transition duration-200">
+-        🔐 API 키 발급
++        🔐 Generate API Key
+     </button>
+ 
+     <div id="resultContainer" class="mt-8 hidden flex-col items-center">
+@@ -30,9 +30,9 @@
+         <button
+                 id="copyBtn"
+                 class="mt-3 text-xs bg-gray-600 hover:bg-gray-500 text-white py-1 px-3 rounded transition">
+-            📋 복사하기
++            📋 Copy to Clipboard
+         </button>
+-        <div id="copyMsg" class="text-xs text-green-400 mt-2 hidden">✅ 클립보드에 복사됐습니다!</div>
++        <div id="copyMsg" class="text-xs text-green-400 mt-2 hidden">✅ Copied to clipboard!</div>
+     </div>
+ </div>
+ 
+@@ -52,7 +52,7 @@
+             resultContainer.classList.remove('hidden');
+             copyMsg.classList.add('hidden');
+         } else {
+-            resultEl.innerText = `⚠️ 에러: ${data.message}`;
++            resultEl.innerText = `⚠️ Error: ${data.message}`;
+             resultContainer.classList.remove('hidden');
+         }
+     });
+diff --git a/src/main/resources/templates/query-logs.html b/src/main/resources/templates/query-logs.html
+index cded830..b443721 100644
+--- a/src/main/resources/templates/query-logs.html
++++ b/src/main/resources/templates/query-logs.html
+@@ -1,162 +1,283 @@
+ <!DOCTYPE html>
+-<html lang="ko">
++<html lang="en">
+ <head>
+-    <meta charset="UTF-8" />
+-    <title>Snail Catcher - 쿼리 로그 조회</title>
++    <meta charset="UTF-8"/>
++    <title>Snail Catcher - Cursor-Based Query Logs</title>
+     <style>
+-        body {
+-            background-color: #1f1f1f;
+-            color: #e0e0e0;
+-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+-            margin: 20px;
+-        }
++    @import url('https://fonts.googleapis.com/css2?family=Roboto+Mono&display=swap');
++
++    body {
++      font-family: 'Roboto Mono', monospace;
++      background-color: #1f2430;
++      color: #d1d5db;
++      padding: 30px 50px;
++      margin: 0;
++      min-height: 100vh;
++      user-select: none;
++    }
+ 
+-        h1 {
+-            color: #3399ff;
+-            margin-bottom: 20px;
+-        }
++    header {
++      padding: 16px 0;
++      font-size: 24px;
++      font-weight: bold;
++      text-align: left;
++      border-bottom: 1px solid #444;
++      margin-bottom: 20px;
++    }
+ 
+-        form label, form input, form button {
+-            font-size: 14px;
+-            vertical-align: middle;
+-        }
++    form {
++      margin-bottom: 25px;
++      display: flex;
++      align-items: center;
++      gap: 12px;
++    }
+ 
+-        form input {
+-            padding: 6px 10px;
+-            border: 1px solid #444;
+-            border-radius: 4px;
+-            background-color: #2b2b2b;
+-            color: #eee;
+-            margin-right: 10px;
+-            width: 250px;
+-        }
++    label {
++      font-weight: 600;
++      font-size: 1rem;
++      color: #a0aec0;
++    }
+ 
+-        form button {
+-            background-color: #3399ff;
+-            border: none;
+-            padding: 7px 15px;
+-            color: white;
+-            border-radius: 4px;
+-            cursor: pointer;
+-            transition: background-color 0.3s ease;
+-        }
++    input {
++      flex-grow: 1;
++      background: #2d3346;
++      border: none;
++      padding: 10px 14px;
++      font-size: 1rem;
++      border-radius: 4px;
++      color: #f8f9fa;
++      outline-offset: 2px;
++      transition: outline-color 0.25s ease;
++    }
+ 
+-        form button:hover {
+-            background-color: #267acc;
+-        }
++    input:focus {
++      outline: 2px solid #4c9aff;
++      background: #323a51;
++    }
+ 
+-        #status.loading {
+-            color: #8bc34a;
+-            margin-top: 10px;
+-        }
++    button {
++      background-color: #4c9aff;
++      color: white;
++      border: none;
++      padding: 10px 22px;
++      font-weight: 600;
++      font-size: 1rem;
++      border-radius: 4px;
++      cursor: pointer;
++      transition: background-color 0.3s ease;
++      user-select: none;
++    }
+ 
+-        #status.error {
+-            color: #e57373;
+-            margin-top: 10px;
+-        }
++    button:hover {
++      background-color: #3a7be0;
++    }
+ 
+-        table {
+-            width: 100%;
+-            border-collapse: collapse;
+-            margin-top: 20px;
+-            background-color: #2b2b2b;
+-            border-radius: 6px;
+-            overflow: hidden;
+-            box-shadow: 0 2px 8px rgba(0,0,0,0.8);
+-        }
++    #status {
++      margin-top: 12px;
++      font-weight: 600;
++      min-height: 22px;
++    }
+ 
+-        th, td {
+-            border-bottom: 1px solid #444;
+-            padding: 12px 15px;
+-            text-align: left;
+-            font-size: 13px;
+-        }
++    .loading {
++      color: #4c9aff;
++    }
+ 
+-        th {
+-            background-color: #333;
+-            color: #a3c1f7;
+-            font-weight: 600;
+-            user-select: none;
+-        }
++    .error {
++      color: #f56565;
++    }
+ 
+-        tr:hover {
+-            background-color: #3a3a3a;
+-        }
++    table {
++      width: 100%;
++      border-collapse: separate;
++      border-spacing: 0 12px;
++      background: transparent;
++    }
+ 
+-        .sql-preview {
+-            cursor: pointer;
+-            color: #66aaff;
+-            text-decoration: underline;
+-            font-family: monospace;
+-            font-size: 13px;
+-            max-width: 350px;
+-            white-space: nowrap;
+-            overflow: hidden;
+-            text-overflow: ellipsis;
+-        }
++    th, td {
++      padding: 14px 20px;
++      text-align: left;
++      vertical-align: middle;
++    }
+ 
+-        #pagination {
+-            margin-top: 20px;
+-            user-select: none;
+-        }
++    th {
++      color: #a0aec0;
++      font-weight: 600;
++      font-size: 0.9rem;
++      user-select: none;
++    }
+ 
+-        #pagination button {
+-            margin: 0 4px;
+-            padding: 7px 14px;
+-            border: 1px solid #444;
+-            background-color: #2b2b2b;
+-            color: #bbb;
+-            cursor: pointer;
+-            border-radius: 4px;
+-            font-size: 14px;
+-            transition: background-color 0.3s ease, color 0.3s ease;
+-        }
++    tbody tr {
++      background-color: #2d3346;
++      border-radius: 6px;
++      transition: background-color 0.3s ease;
++      cursor: default;
++    }
+ 
+-        #pagination button:hover:not(.disabled):not(.active) {
+-            background-color: #3399ff;
+-            color: white;
+-            border-color: #3399ff;
+-        }
++    tbody tr:hover {
++      background-color: #3a435e;
++    }
+ 
+-        #pagination button.active {
+-            background-color: #3399ff;
+-            color: white;
+-            border-color: #3399ff;
+-            cursor: default;
+-        }
++    td {
++      color: #d1d5db;
++      font-size: 0.95rem;
++      max-width: 300px;
++      word-break: break-word;
++    }
+ 
+-        #pagination button.disabled {
+-            color: #555;
+-            cursor: not-allowed;
+-            background-color: #1f1f1f;
+-            border-color: #333;
+-        }
++    .sql-preview {
++      color: #4c9aff;
++      cursor: pointer;
++      white-space: nowrap;
++      overflow: hidden;
++      text-overflow: ellipsis;
++      max-width: 350px;
++      user-select: text;
++      transition: color 0.3s ease;
++    }
+ 
+-        /* 삭제 버튼 스타일 */
+-        .delete-btn {
+-            background-color: #e55353;
+-            border: none;
+-            color: white;
+-            padding: 4px 10px;
+-            border-radius: 3px;
+-            cursor: pointer;
+-            font-size: 12px;
+-            transition: background-color 0.3s ease;
+-        }
++    .sql-preview:hover {
++      color: #82b1ff;
++      text-decoration: underline;
++    }
+ 
+-        .delete-btn:hover {
+-            background-color: #b03535;
+-        }
+-    </style>
++    .delete-btn {
++      background-color: #f56565;
++      border: none;
++      padding: 8px 14px;
++      border-radius: 4px;
++      color: white;
++      font-weight: 600;
++      cursor: pointer;
++      transition: background-color 0.3s ease;
++      user-select: none;
++    }
++
++    .delete-btn:hover {
++      background-color: #c53030;
++    }
++
++    #loadMoreContainer {
++      margin-top: 30px;
++      text-align: center;
++    }
++
++    #loadMoreBtn {
++      background-color: #4c9aff;
++      padding: 12px 28px;
++      font-size: 1rem;
++      border-radius: 6px;
++      border: none;
++      color: white;
++      cursor: pointer;
++      user-select: none;
++      transition: background-color 0.3s ease;
++    }
++
++    #loadMoreBtn:hover {
++      background-color: #3a7be0;
++    }
++
++    #modalOverlay {
++      position: fixed;
++      top: 0; left: 0;
++      width: 100vw; height: 100vh;
++      background: rgba(15, 23, 42, 0.85);
++      display: none;
++      justify-content: center;
++      align-items: center;
++      z-index: 1000;
++      user-select: text;
++    }
++
++    #modalContent {
++      background: #2d3346;
++      width: 90%;
++      max-width: 1200px;
++      max-height: 85vh;
++      border-radius: 8px;
++      display: flex;
++      flex-direction: column;
++      overflow: hidden;
++    }
++
++    #modalHeader {
++      display: flex;
++      justify-content: space-between;
++      align-items: center;
++      padding: 16px 24px;
++      border-bottom: 1px solid #44506d;
++      background-color: #1f2430;
++      user-select: none;
++    }
++
++    #modalHeader h2 {
++      margin: 0;
++      font-weight: 700;
++      font-size: 1.3rem;
++      color: #f8f9fa;
++    }
++
++    #modalCloseBtn {
++      background: transparent;
++      border: none;
++      font-size: 1.5rem;
++      color: #f56565;
++      cursor: pointer;
++      transition: color 0.25s ease;
++    }
++
++    #modalCloseBtn:hover {
++      color: #c53030;
++    }
++
++    #modalTabs {
++      display: flex;
++      border-bottom: 1px solid #44506d;
++      background-color: #252a3b;
++      user-select: none;
++    }
++
++    #modalTabs button {
++      flex: 1;
++      padding: 12px 0;
++      background: transparent;
++      border: none;
++      color: #a0aec0;
++      font-weight: 600;
++      cursor: pointer;
++      transition: background-color 0.3s ease, color 0.3s ease;
++    }
++
++    #modalTabs button.active {
++      color: #4c9aff;
++      border-bottom: 3px solid #4c9aff;
++      font-weight: 700;
++      background-color: #2d3346;
++    }
++
++    #modalBody {
++      flex-grow: 1;
++      background-color: #2d3346;
++      padding: 20px 25px;
++      overflow-x: auto;
++      overflow-y: auto;
++      font-size: 0.95rem;
++      white-space: pre;
++      color: #e0e6f0;
++      font-family: 'Roboto Mono', monospace;
++      line-height: 1.4;
++    }
++  </style>
+ </head>
+ <body>
+-
+-<h1>쿼리 로그 조회</h1>
++<header>
++    🐌 Snail Catch
++</header>
+ 
+ <form onsubmit="setApiKey(event)">
+-    <label for="apiKeyInput">API Key: </label>
+-    <input type="text" id="apiKeyInput" required placeholder="API 키를 입력하세요" />
+-    <button type="submit">검색</button>
++    <label>API Key:</label>
++    <input id="apiKeyInput" required placeholder="Enter API key"/>
++    <button type="submit">Start</button>
+ </form>
+ 
+ <div id="status"></div>
+@@ -165,237 +286,180 @@
+     <thead>
+     <tr>
+         <th>Method Name</th>
+-        <th>SQL Query &amp;&amp; Execution Plan (클릭)</th>
++        <th>SQL</th>
+         <th>Duration (ms)</th>
+         <th>Created At</th>
+-        <th>Action</th>
++        <th>Delete</th>
+     </tr>
+     </thead>
+     <tbody id="logTableBody"></tbody>
+ </table>
+ 
+-<div id="pagination"></div>
++<div id="loadMoreContainer">
++    <button id="loadMoreBtn">Load More</button>
++</div>
++
++<!-- Modal -->
++<div id="modalOverlay" onclick="closeModal(event)">
++    <div id="modalContent" onclick="event.stopPropagation()">
++        <div id="modalHeader">
++            <h2 id="modalTitle">Query Details</h2>
++            <button id="modalCloseBtn" aria-label="Close modal" onclick="closeModal()">×</button>
++        </div>
++        <div id="modalTabs">
++            <button id="tabSql" class="active" onclick="switchTab('sql')">SQL Query</button>
++            <button id="tabPlan" onclick="switchTab('plan')">Execution Plan</button>
++        </div>
++        <div id="modalBody"></div>
++    </div>
++</div>
+ 
+ <script>
+-    let apiKey = null;
+-    let currentPage = 0;
+-    let totalPages = 0;
+-    const pageSize = 15;
+-
+-    // API 키 입력 후 쿼리 로그 요청 시작
+-    function setApiKey(event) {
+-        event.preventDefault();
+-        apiKey = document.getElementById("apiKeyInput").value.trim();
+-        currentPage = 0;
+-        fetchQueryLogs(currentPage);
+-    }
+-
+-    // 쿼리 로그 목록 불러오기
+-    function fetchQueryLogs(page) {
+-        const status = document.getElementById("status");
+-        const tbody = document.getElementById("logTableBody");
+-        const paginationDiv = document.getElementById("pagination");
+-
+-        status.textContent = "로딩 중...";
+-        status.className = "loading";
+-        tbody.innerHTML = "";
+-        paginationDiv.innerHTML = "";
+-
+-        if (!apiKey) {
+-            status.textContent = "API 키를 입력하세요.";
+-            status.className = "error";
+-            return;
+-        }
+-
+-        fetch(`/api/query-logs?page=${page}&size=${pageSize}`, {
+-            method: "GET",
+-            headers: { "X-API-KEY": apiKey }
+-        })
+-        .then(res => {
+-            if (!res.ok) throw new Error("API 호출 실패");
+-            return res.json();
+-        })
+-        .then(data => {
+-            const response = data.data;
+-            const logs = response?.content || response || [];
+-            totalPages = response?.totalPages ?? 0;
+-            currentPage = response?.currentPage ?? page;
+-
+-            if (logs.length === 0) {
+-                status.textContent = "데이터가 없습니다.";
+-                status.className = "";
+-                return;
+-            }
+-
+-            logs.forEach((log) => {
+-                const truncatedQuery = log.sqlQuery.length > 100
+-                    ? log.sqlQuery.slice(0, 100) + "..."
+-                    : log.sqlQuery;
+-
+-                const row = document.createElement("tr");
+-                row.innerHTML = `
+-                    <td>${escapeHtml(log.methodName)}</td>
+-                    <td>
+-                        <div class="sql-preview" onclick="openPopup('${escapeForJs(log.sqlQuery)}', '${escapeForJs(log.executionPlan)}')" title="클릭하면 새 창에서 전체 쿼리와 실행 계획이 표시됩니다">${escapeHtml(truncatedQuery)}</div>
+-                    </td>
+-                    <td>${log.duration}</td>
+-                    <td>${new Date(log.createdAt).toLocaleString()}</td>
+-                    <td><button class="delete-btn" onclick="deleteLog('${log.id}')">Delete</button></td>
+-                `;
+-                tbody.appendChild(row);
+-            });
+-
+-            status.textContent = "";
+-            status.className = "";
+-
+-            renderPagination();
+-        })
+-        .catch(err => {
+-            status.textContent = "에러: " + err.message;
+-            status.className = "error";
+-        });
++  let apiKey = null;
++  let nextCursor = null;
++  const pageSize = 15;
++
++  function setApiKey(e) {
++    e.preventDefault();
++    apiKey = document.getElementById("apiKeyInput").value.trim();
++    localStorage.setItem("snailApiKey", apiKey);
++    nextCursor = null;
++    document.getElementById("logTableBody").innerHTML = "";
++    loadLogs();
++  }
++
++  window.onload = function () {
++    const savedKey = localStorage.getItem("snailApiKey");
++    if (savedKey) {
++      document.getElementById("apiKeyInput").value = savedKey;
++      apiKey = savedKey;
++      loadLogs();
+     }
++  };
++
++  function loadLogs() {
++    const status = document.getElementById("status");
++    const tbody = document.getElementById("logTableBody");
++    const btn = document.getElementById("loadMoreBtn");
++
++    status.textContent = "Loading...";
++    status.className = "loading";
++    btn.style.display = "none";
++
++    const url = new URL("/api/query-logs/cursor", window.location.origin);
++    url.searchParams.set("size", pageSize);
++    if (nextCursor) url.searchParams.set("cursorCreatedAt", nextCursor);
++
++    fetch(url, {
++      headers: { "X-API-KEY": apiKey }
++    })
++      .then(r => {
++        if (!r.ok) throw new Error('Network request failed');
++        return r.json();
++      })
++      .then(({ data }) => {
++        data.logs.forEach(log => {
++          const tr = document.createElement("tr");
++          tr.innerHTML = `
++            <td>${escapeHtml(log.methodName)}</td>
++            <td class="sql-preview" onclick="openModal('${escapeForJs(log.sqlQuery)}', '${escapeForJs(log.executionPlan)}')">
++              ${escapeHtml(log.sqlQuery.substring(0, 100))}...
++            </td>
++            <td>${log.duration}</td>
++            <td>${new Date(log.createdAt).toLocaleString('en-US', {
++              year: 'numeric', month: '2-digit', day: '2-digit',
++              hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true
++            })}</td>
++            <td><button class="delete-btn" onclick="deleteLog('${log.id}', this)">Delete</button></td>
++          `;
++          tbody.appendChild(tr);
++        });
+ 
+-    // 새 팝업으로 쿼리와 실행계획 보여주기
+-    function openPopup(sqlQuery, executionPlan) {
+-        const popupHtml = `
+-            <!DOCTYPE html>
+-            <html lang="ko">
+-            <head>
+-                <meta charset="UTF-8" />
+-                <title>쿼리 상세 보기</title>
+-                <style>
+-                    body {
+-                        background-color: #1f1f1f;
+-                        color: #e0e0e0;
+-                        font-family: monospace, monospace;
+-                        padding: 20px;
+-                    }
+-                    h2 {
+-                        color: #3399ff;
+-                        margin-bottom: 10px;
+-                    }
+-                    pre {
+-                        background-color: #222;
+-                        border: 1px solid #444;
+-                        padding: 15px;
+-                        border-radius: 5px;
+-                        max-height: 300px;
+-                        overflow: auto;
+-                        white-space: pre-wrap;
+-                        word-break: break-word;
+-                    }
+-                    .section {
+-                        margin-bottom: 25px;
+-                    }
+-                </style>
+-            </head>
+-            <body>
+-                <div class="section">
+-                    <h2>SQL Query</h2>
+-                    <pre>${sqlQuery}</pre>
+-                </div>
+-                <div class="section">
+-                    <h2>Execution Plan</h2>
+-                    <pre>${executionPlan}</pre>
+-                </div>
+-            </body>
+-            </html>
+-        `;
+-
+-        // 팝업 창 크기 및 옵션
+-        const popupWidth = 700;
+-        const popupHeight = 500;
+-        const left = (window.screen.width / 2) - (popupWidth / 2);
+-        const top = (window.screen.height / 2) - (popupHeight / 2);
+-
+-        const popup = window.open("", "QueryDetails",
+-            `width=${popupWidth},height=${popupHeight},top=${top},left=${left},resizable=yes,scrollbars=yes`);
+-
+-        popup.document.write(popupHtml);
+-        popup.document.close();
+-    }
+-
+-    // 페이지네이션 렌더링
+-    function renderPagination() {
+-        const paginationDiv = document.getElementById("pagination");
+-
+-        if (totalPages <= 1) {
+-            paginationDiv.innerHTML = "";
+-            return;
+-        }
+-
+-        // 이전 버튼
+-        const prevBtn = document.createElement("button");
+-        prevBtn.textContent = "Prev";
+-        prevBtn.disabled = currentPage === 0;
+-        prevBtn.className = prevBtn.disabled ? "disabled" : "";
+-        prevBtn.onclick = () => {
+-            if (currentPage > 0) fetchQueryLogs(currentPage - 1);
+-        };
+-        paginationDiv.appendChild(prevBtn);
+-
+-        // 페이지 번호 버튼 (최대 5개)
+-        const maxPageButtons = 5;
+-        let startPage = Math.max(0, currentPage - Math.floor(maxPageButtons / 2));
+-        let endPage = startPage + maxPageButtons - 1;
+-        if (endPage >= totalPages) {
+-            endPage = totalPages - 1;
+-            startPage = Math.max(0, endPage - maxPageButtons + 1);
+-        }
++        status.textContent = "";
++        status.className = "";
+ 
+-        for (let i = startPage; i <= endPage; i++) {
+-            const pageBtn = document.createElement("button");
+-            pageBtn.textContent = i + 1;
+-            pageBtn.className = (i === currentPage) ? "active" : "";
+-            pageBtn.onclick = () => fetchQueryLogs(i);
+-            paginationDiv.appendChild(pageBtn);
++        if (data.hasNext) {
++          btn.style.display = "inline-block";
++          nextCursor = data.nextCursorCreatedAt;
+         }
+-
+-        // 다음 버튼
+-        const nextBtn = document.createElement("button");
+-        nextBtn.textContent = "Next";
+-        nextBtn.disabled = currentPage === totalPages - 1;
+-        nextBtn.className = nextBtn.disabled ? "disabled" : "";
+-        nextBtn.onclick = () => {
+-            if (currentPage < totalPages - 1) fetchQueryLogs(currentPage + 1);
+-        };
+-        paginationDiv.appendChild(nextBtn);
+-    }
+-
+-    // 로그 삭제 요청
+-    function deleteLog(logId) {
+-        if (!confirm("이 쿼리 로그를 삭제하시겠습니까?")) return;
+-
+-        fetch(`/api/query-logs/${logId}`, {
+-            method: "DELETE",
+-            headers: { "X-API-KEY": apiKey }
+-        })
+-        .then(res => {
+-            if (!res.ok) throw new Error("삭제 실패");
+-            alert("삭제되었습니다.");
+-            fetchQueryLogs(currentPage);
+-        })
+-        .catch(err => alert("에러: " + err.message));
+-    }
+-
+-    // XSS 방지용 HTML 이스케이프
+-    function escapeHtml(text) {
+-        if (!text) return "";
+-        return text
+-            .replace(/&/g, "&amp;")
+-            .replace(/</g, "&lt;")
+-            .replace(/>/g, "&gt;")
+-            .replace(/"/g, "&quot;")
+-            .replace(/'/g, "&#039;");
+-    }
+-
+-    // JS 문자열 내에 안전하게 삽입하기 위한 이스케이프 (단순화)
+-    function escapeForJs(text) {
+-        if (!text) return "";
+-        return escapeHtml(text).replace(/\n/g, "\\n").replace(/\r/g, "\\r").replace(/'/g, "\\'");
++      })
++      .catch(err => {
++        status.textContent = "Error: " + err.message;
++        status.className = "error";
++      });
++  }
++
++  document.getElementById("loadMoreBtn").onclick = loadLogs;
++
++  const modalOverlay = document.getElementById('modalOverlay');
++  const modalBody = document.getElementById('modalBody');
++  const tabSql = document.getElementById('tabSql');
++  const tabPlan = document.getElementById('tabPlan');
++
++  function openModal(sql, plan) {
++    modalOverlay.style.display = 'flex';
++    currentContent = { sql, plan };
++    showTab('sql');
++  }
++
++  function closeModal(e) {
++    if (e) e.stopPropagation();
++    modalOverlay.style.display = 'none';
++    modalBody.textContent = '';
++  }
++
++  let currentContent = { sql: '', plan: '' };
++
++  function showTab(tab) {
++    if (tab === 'sql') {
++      modalBody.textContent = currentContent.sql;
++      tabSql.classList.add('active');
++      tabPlan.classList.remove('active');
++    } else {
++      modalBody.textContent = currentContent.plan;
++      tabPlan.classList.add('active');
++      tabSql.classList.remove('active');
+     }
++  }
++
++  function switchTab(tab) {
++    showTab(tab);
++  }
++
++  function deleteLog(id, btn) {
++    if (!confirm("Are you sure you want to delete this log?")) return;
++    fetch(`/api/query-logs/${id}`, {
++      method: "DELETE",
++      headers: { "X-API-KEY": apiKey }
++    }).then(r => {
++      if (r.ok) {
++        const row = btn.closest("tr");
++        row.remove();
++      } else {
++        alert("Failed to delete");
++      }
++    });
++  }
++
++  function escapeForJs(str) {
++    return (str ?? '').replace(/\\/g, '\\\\')
++      .replace(/'/g, "\\'")
++      .replace(/"/g, '\\"')
++      .replace(/\n/g, '\\n')
++      .replace(/\r/g, '\\r');
++  }
++
++  function escapeHtml(str) {
++    return str?.replace(/[&<>"']/g, function (m) {
++      return {
++        '&': '&amp;',
++        '<': '&lt;',
++        '>': '&gt;',
++        '"': '&quot;',
++        "'": '&#39;'
++      }[m];
++    }) ?? "";
++  }
+ </script>
+-
+ </body>
+ </html>

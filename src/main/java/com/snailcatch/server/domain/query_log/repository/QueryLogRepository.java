@@ -5,5 +5,4 @@ import org.bson.types.ObjectId;
 import org.springframework.data.mongodb.repository.MongoRepository;
 
 public interface QueryLogRepository  extends MongoRepository<QueryLog, ObjectId>, CustomQueryLogRepository {
-    long count();
 }
