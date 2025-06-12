@@ -3,7 +3,7 @@ name: Build, Push and Deploy to EC2
 on:
   push:
     branches:
-      - main  # main 브랜치에 push 시 실행
+      - master
 
 jobs:
   build-and-push:
