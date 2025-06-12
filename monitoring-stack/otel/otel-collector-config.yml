@@ -11,7 +11,7 @@ exporters: #(어디로 데이터를 보낼지)
   prometheus: # Collector 가 수집한 메트릭을 Prometheus 가 긁어 갈 수 있도록 /metrics 엔드포인트(8889)에 노출
     endpoint: "0.0.0.0:8889"
     const_labels:
-      service: ticketon-service
+      service: snail-server
 
   otlp/tempo: # 트레이스를 Tempo 에 보내기 위한 설정
     endpoint: tempo:4317 # Tempo 컨테이너가 열고 있는 gRPC 포트

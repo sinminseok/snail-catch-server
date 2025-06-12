@@ -1,59 +1,23 @@
 version: '3.8'
 
 services:
-
-  mysql:
-    image: mysql:8.0
-    container_name: mysql-db
-    environment:
-      MYSQL_ROOT_PASSWORD: rootpassword
-      MYSQL_DATABASE: snaildb
-      MYSQL_USER: snailuser
-      MYSQL_PASSWORD: snailpass
-    ports:
-      - "3307:3306"
-    volumes:
-      - mysql-data:/var/lib/mysql
-
   snail-app-1:
-    build:
-      context: .
-      dockerfile: Dockerfile
+    image: minseok1768/snail-app:latest
     container_name: snail-app-1
-    environment:
-      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE}
-      MONGO_DB_NAME: ${MONGO_DB_NAME}
-      MONGO_DB_URL: ${MONGO_DB_URL}
-      SECRET_KEY: ${SECRET_KEY}
-      ACCESS_KEY_EXPIRATION_SECONDS: ${ACCESS_KEY_EXPIRATION_SECONDS}
-      REFRESH_KEY_EXPIRATION_SECONDS: ${REFRESH_KEY_EXPIRATION_SECONDS}
-      DB_URL: jdbc:mysql://mysql:3306/snaildb
-      DB_USER_NAME: snailuser
-      DB_PASSWORD: snailpass
+    env_file:
+      - .env
     ports:
       - "8082:8080"
-    depends_on:
-      - mysql
+    restart: always
 
   snail-app-2:
-    build:
-      context: .
-      dockerfile: Dockerfile
+    image: minseok1768/snail-app:latest
     container_name: snail-app-2
-    environment:
-      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE}
-      MONGO_DB_NAME: ${MONGO_DB_NAME}
-      MONGO_DB_URL: ${MONGO_DB_URL}
-      SECRET_KEY: ${SECRET_KEY}
-      ACCESS_KEY_EXPIRATION_SECONDS: ${ACCESS_KEY_EXPIRATION_SECONDS}
-      REFRESH_KEY_EXPIRATION_SECONDS: ${REFRESH_KEY_EXPIRATION_SECONDS}
-      DB_URL: jdbc:mysql://mysql:3306/snaildb
-      DB_USER_NAME: snailuser
-      DB_PASSWORD: snailpass
+    env_file:
+      - .env
     ports:
       - "8083:8080"
-    depends_on:
-      - mysql
+    restart: always
 
   nginx:
     image: nginx:latest
@@ -65,7 +29,4 @@ services:
     depends_on:
       - snail-app-1
       - snail-app-2
-
-
-volumes:
-  mysql-data:
+    restart: always

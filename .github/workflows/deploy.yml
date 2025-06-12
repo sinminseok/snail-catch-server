@@ -1,0 +1,63 @@
+name: Build, Push and Deploy to EC2
+
+on:
+  push:
+    branches:
+      - main  # main 브랜치에 push 시 실행
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v2
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Build Docker image
+        run: docker build -t ${{ secrets.DOCKERHUB_USERNAME }}/snail-app:latest .
+
+      - name: Push Docker image
+        run: docker push ${{ secrets.DOCKERHUB_USERNAME }}/snail-app:latest
+
+      - name: Create .env file from secrets
+        run: |
+          echo "MONGO_DB_NAME=${{ secrets.MONGO_DB_NAME }}" >> .env
+          echo "MONGO_DB_URL=${{ secrets.MONGO_DB_URL }}" >> .env
+          echo "DB_URL=${{ secrets.DB_URL }}" >> .env
+          echo "DB_USER_NAME=${{ secrets.DB_USER_NAME }}" >> .env
+          echo "DB_PASSWORD=${{ secrets.DB_PASSWORD }}" >> .env
+          echo "SECRET_KEY=${{ secrets.SECRET_KEY }}" >> .env
+          echo "ACCESS_KEY_EXPIRATION_SECONDS=${{ secrets.ACCESS_KEY_EXPIRATION_SECONDS }}" >> .env
+          echo "REFRESH_KEY_EXPIRATION_SECONDS=${{ secrets.REFRESH_KEY_EXPIRATION_SECONDS }}" >> .env
+          echo "OTEL_COLLECTOR_ENDPOINT=${{ secrets.OTEL_COLLECTOR_ENDPOINT }}" >> .env
+
+      - name: Upload .env to EC2
+        uses: appleboy/scp-action@v0.1.4
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USER }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          source: ".env"
+          target: "/home/ec2-user/your-deploy-folder"
+
+  deploy-to-ec2:
+    needs: build-and-push
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: SSH to EC2 and deploy
+        uses: appleboy/ssh-action@v0.1.7
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USER }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          script: |
+            cd /home/ec2-user/your-deploy-folder
+            docker-compose pull
+            docker-compose up -d
