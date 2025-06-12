@@ -77,5 +77,6 @@ jobs:
           script: |
             mkdir -p /home/ubuntu/snail-app
             cd /home/ubuntu/snail-app
-            docker-compose pull
-            docker-compose up -d
+            docker-compose down    # 현재 실행 중인 컨테이너 정리
+            docker-compose pull    # 최신 이미지 받아오기
+            docker-compose up -d   # 다시 실행

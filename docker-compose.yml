@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   snail-app-1:
     image: minseok1768/snail-app:latest
