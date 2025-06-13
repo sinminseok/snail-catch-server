@@ -23,9 +23,9 @@ jobs:
         run: chmod +x ./gradlew
 
       - name: Save SSH key to file
-          run: |
-            echo "${{ secrets.EC2_SSH_KEY }}" > private_key.pem
-            chmod 600 private_key.pem
+        run: |
+          echo "${{ secrets.EC2_SSH_KEY }}" > private_key.pem
+          chmod 600 private_key.pem
 
       - name: Test SSH connection to EC2 before build
         run: |
