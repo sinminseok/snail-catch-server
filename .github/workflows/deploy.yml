@@ -13,7 +13,6 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
 
-      # ✅ JDK 세팅 및 gradlew 실행 권한 부여
       - name: Set up JDK
         uses: actions/setup-java@v3
         with:
@@ -23,26 +22,21 @@ jobs:
       - name: Grant execute permission for gradlew
         run: chmod +x ./gradlew
 
-      # ✅ JAR 파일 빌드
       - name: Build jar
         run: ./gradlew bootJar
 
-      # ✅ Docker Hub 로그인
       - name: Log in to Docker Hub
         uses: docker/login-action@v2
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      # ✅ Docker 이미지 빌드
       - name: Build Docker image
         run: docker build -t ${{ secrets.DOCKERHUB_USERNAME }}/snail-app:latest .
 
-      # ✅ Docker Hub로 푸시
       - name: Push Docker image
         run: docker push ${{ secrets.DOCKERHUB_USERNAME }}/snail-app:latest
 
-      # ✅ .env 파일 생성
       - name: Create .env file from secrets
         run: |
           echo "MONGO_DB_NAME=${{ secrets.MONGO_DB_NAME }}" >> .env
@@ -53,9 +47,9 @@ jobs:
           echo "SECRET_KEY=${{ secrets.SECRET_KEY }}" >> .env
           echo "ACCESS_KEY_EXPIRATION_SECONDS=${{ secrets.ACCESS_KEY_EXPIRATION_SECONDS }}" >> .env
           echo "REFRESH_KEY_EXPIRATION_SECONDS=${{ secrets.REFRESH_KEY_EXPIRATION_SECONDS }}" >> .env
-          echo "OTEL_COLLECTOR_ENDPOINT=${{ secrets.OTEL_COLLECTOR_ENDPOINT }}" >> .env
+          echo "OTEL_EXPORTER_OTLP_ENDPOINT=${{ secrets.OTEL_EXPORTER_OTLP_ENDPOINT }}" >> .env
+        
 
-      # ✅ .env 파일 EC2로 전송
       - name: Upload .env to EC2
         uses: appleboy/scp-action@v0.1.4
         with:
@@ -65,7 +59,6 @@ jobs:
           source: ./.env
           target: /home/ubuntu/snail-app/
 
-      # ✅ docker-compose.yml EC2로 전송
       - name: Upload docker-compose.yml to EC2
         uses: appleboy/scp-action@v0.1.4
         with:

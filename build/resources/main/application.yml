@@ -23,14 +23,13 @@ spring:
       initialization-fail-timeout: 1
       read-only: false
       leak-detection-threshold: 0
-
   sql:
     init:
       mode: always
 
   jpa:
     hibernate:
-      ddl-auto: update
+      ddl-auto: none
       database-platform: org.hibernate.dialect.MySQLDialect
       defer-datasource-initialization: true
     properties:
@@ -55,7 +54,7 @@ management:
     export:
       otlp:
         enabled: true
-        endpoint: http://localhost:4317
+        endpoint: http://otel-collector:4318
     enable:
       all: true
       jvm: true
@@ -66,16 +65,22 @@ management:
     prometheus:
       enabled: true
 
-
 otel:
   resource:
     attributes:
       service.name: snail-service
   exporter:
     otlp:
-      endpoint: http://localhost:4317
+      url: http://otel-collector:4317
       protocol: grpc
 
+logging:
+  level:
+    root: WARN
+    io.opentelemetry: WARN
+    io.opentelemetry.sdk: WARN
+    io.opentelemetry.exporter: WARN
+    io.micrometer: WARN
 
 server:
   tomcat:
@@ -83,7 +88,6 @@ server:
       max: 500
       min-spare: 10
       max-queue-capacity: 2147483647
-
     max-connections: 10000
     accept-count: 100
     connection-timeout: 60000

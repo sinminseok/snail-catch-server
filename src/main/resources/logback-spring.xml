@@ -1,21 +1,23 @@
 <configuration>
-    <property name="LOG_PATH" value="/Users/sinminseok12/Desktop/Ticket-on/ticketon/logs"/>
+    <appender name="NOP" class="ch.qos.logback.core.spi.NOPAppender" />-->
 
-    <appender name="FILE" class="ch.qos.logback.core.FileAppender">
-        <file>${LOG_PATH}/spring-app.log</file>
-        <encoder>
-            <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n</pattern>
-        </encoder>
-    </appender>
+    <include resource="org/springframework/boot/logging/logback/defaults.xml"/>
+    <property name="LOKI_URL" value="http://loki:3100/loki/api/v1/push"/>
 
-    <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
-        <encoder>
-            <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n</pattern>
-        </encoder>
+    <appender name="LOKI" class="com.github.loki4j.logback.Loki4jAppender">
+        <encoder class="net.logstash.logback.encoder.LogstashEncoder" />
+        <http>
+            <url>${LOKI_URL}</url>
+        </http>
+        <labels>
+            <label name="app" value="snail-service"/>
+            <label name="level" pattern="%level"/>
+            <label name="thread" pattern="%thread"/>
+        </labels>
     </appender>
 
     <root level="INFO">
-        <appender-ref ref="CONSOLE"/>
-        <appender-ref ref="FILE"/>
+        <appender-ref ref="LOKI"/>
     </root>
+
 </configuration>

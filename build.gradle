@@ -29,23 +29,24 @@ bootRun {
 	jvmArgs = [
 			"-javaagent:${buildDir}/agent/opentelemetry-javaagent.jar",
 			"-Dotel.metrics.exporter=otlp",
-			"-Dotel.exporter.otlp.metrics.endpoint=http://localhost:4317",
-			"-Dotel.exporter.otlp.protocol=grpc",
-			"-Dotel.exporter.otlp.endpoint=http://localhost:4317",
+			"-Dotel.exporter.otlp.endpoint=http://otel-collector:4318/v1/metrics",
+			"-Dotel.exporter.otlp.protocol=http/protobuf",
 			"-Dotel.instrumentation.runtime-metrics.enabled=true",
 			"-Dotel.instrumentation.system-metrics.enabled=true",
 			"-Dotel.instrumentation.micrometer.enabled=true",
 			"-Dotel.resource.attributes=service.name=snail-service",
 			"-Dotel.metrics.export.interval=1000",
-			"-Dotel.javaagent.debug=true",
+			"-Dotel.javaagent.debug=false",
 			"-Dotel.logs.exporter=none",
 			"-Dspring.main.allow-bean-definition-overriding=true"
 	]
 }
 
+
 bootRun.dependsOn("copyAgent")
 
 dependencies {
+
 	agent 'io.opentelemetry.javaagent:opentelemetry-javaagent:2.7.0'
 	implementation 'io.lettuce:lettuce-core'
 	implementation 'io.micrometer:micrometer-core'
@@ -57,6 +58,8 @@ dependencies {
 	implementation 'org.springframework.boot:spring-boot-starter-actuator'
 	implementation 'io.micrometer:micrometer-registry-prometheus'
 	implementation 'com.github.vertical-blank:sql-formatter:2.0.3'
+
+	implementation 'com.github.loki4j:loki-logback-appender:1.4.0'
 
 	implementation 'org.springframework.boot:spring-boot-starter-thymeleaf'
 	implementation 'io.jsonwebtoken:jjwt-api:0.11.5'
@@ -100,17 +103,16 @@ jib {
 	container {
 		mainClass = "com.huisam.orderapplication.OrderApplicationKt"
 		jvmFlags = [
-				"-javaagent:${buildDir}/agent/opentelemetry-javaagent.jar",
+				"-javaagent:/otelagent/opentelemetry-javaagent.jar",
 				"-Dotel.metrics.exporter=otlp",
-				"-Dotel.exporter.otlp.metrics.endpoint=http://localhost:4317",
-				"-Dotel.exporter.otlp.protocol=grpc",
-				"-Dotel.exporter.otlp.endpoint=http://localhost:4317",
+				"-Dotel.exporter.otlp.endpoint=http://otel-collector:4318/v1/metrics",
+				"-Dotel.exporter.otlp.protocol=http/protobuf",
 				"-Dotel.instrumentation.runtime-metrics.enabled=true",
 				"-Dotel.instrumentation.system-metrics.enabled=true",
 				"-Dotel.instrumentation.micrometer.enabled=true",
 				"-Dotel.resource.attributes=service.name=snail-service",
 				"-Dotel.metrics.export.interval=1000",
-				"-Dotel.javaagent.debug=true",
+				"-Dotel.javaagent.debug=false",
 				"-Dotel.logs.exporter=none",
 				"-Dspring.main.allow-bean-definition-overriding=true"
 		]
