@@ -23,8 +23,8 @@ jobs:
         run: chmod +x ./gradlew
 
       - name: Test SSH connection to EC2 before build
-          run: |
-            ssh -o StrictHostKeyChecking=no -i ${{ secrets.EC2_SSH_KEY }} ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} "echo SSH connection success"
+        run: |
+          ssh -o StrictHostKeyChecking=no -i ${{ secrets.EC2_SSH_KEY }} ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} "echo SSH connection success"
 
       - name: Build jar
         run: ./gradlew bootJar
