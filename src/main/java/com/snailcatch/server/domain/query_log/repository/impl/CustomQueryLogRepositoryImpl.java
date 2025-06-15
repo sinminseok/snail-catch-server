@@ -24,40 +24,46 @@ public class CustomQueryLogRepositoryImpl implements CustomQueryLogRepository {
 
     @Override
     public QueryLogCursorResponse findLogsByCursor(String key, LocalDateTime cursorCreatedAt, int size) {
+        Query query = buildQuery(key, cursorCreatedAt, size + 1);
+        List<QueryLog> logs = mongoTemplate.find(query, QueryLog.class);
+
+        boolean hasNext = logs.size() > size;
+
+        if (hasNext) {
+            logs.remove(size); // 페이징 커서 처리용 마지막 항목 제거
+        }
+
+        List<QueryLogResponse> content = convertToResponseList(logs);
+        LocalDateTime nextCursor = extractNextCursor(logs, hasNext);
+
+        return new QueryLogCursorResponse(content, hasNext, nextCursor);
+    }
+
+    private Query buildQuery(String key, LocalDateTime cursorCreatedAt, int limit) {
         Criteria criteria = Criteria.where("key").is(key);
 
         if (cursorCreatedAt != null) {
-            Date cursorCreatedAtDate = Date.from(cursorCreatedAt.toInstant(ZoneOffset.UTC));
-            criteria = criteria.and("created_at").lt(cursorCreatedAtDate);
+            Date cursorDate = Date.from(cursorCreatedAt.toInstant(ZoneOffset.UTC));
+            criteria = criteria.and("created_at").lt(cursorDate);
         }
 
-        Query query = new Query()
+        return new Query()
                 .addCriteria(criteria)
                 .with(Sort.by(Sort.Direction.DESC, "created_at"))
-                .limit(size + 1);
+                .limit(limit);
+    }
 
-        List<QueryLog> logs = mongoTemplate.find(query, QueryLog.class);
-        boolean hasNext = logs.size() > size;
-        if (hasNext) {
-            logs.remove(size);
-        }
-
-        List<QueryLogResponse> content = logs.stream()
-                .map(log -> QueryLogResponse.builder()
-                        .id(log.getId().toHexString())
-                        .methodName(log.getMethodName())
-                        .sqlQuery(log.getSqlQuery())
-                        .executionPlan(log.getExecutionPlan())
-                        .duration(log.getDuration())
-                        .createdAt(log.getCreatedAt())
-                        .build())
+    private List<QueryLogResponse> convertToResponseList(List<QueryLog> logs) {
+        return logs.stream()
+                .map(log -> QueryLogResponse.toQueryLogResponse(log))
                 .toList();
+    }
 
-        LocalDateTime nextCursor = hasNext
-                ? logs.get(logs.size() - 1).getCreatedAt()
-                : null;
-
-        return new QueryLogCursorResponse(content, hasNext, nextCursor);
+    private LocalDateTime extractNextCursor(List<QueryLog> logs, boolean hasNext) {
+        if (!hasNext || logs.isEmpty()) {
+            return null;
+        }
+        return logs.get(logs.size() - 1).getCreatedAt();
     }
 
 }

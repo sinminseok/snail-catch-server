@@ -16,7 +16,7 @@ public class AsyncConfig {
         ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
         executor.setCorePoolSize(10);      // 최소 스레드 개수
         executor.setMaxPoolSize(30);       // 최대 스레드 개수
-        executor.setQueueCapacity(10000);  // 작업 큐의 크기
+        executor.setQueueCapacity(10000);  // 작업 큐 크기
         executor.setThreadNamePrefix("QueryLog-");
         executor.initialize();
         return executor;

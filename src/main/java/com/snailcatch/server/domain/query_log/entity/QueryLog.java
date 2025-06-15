@@ -16,7 +16,7 @@ import java.time.LocalDateTime;
 @AllArgsConstructor
 @NoArgsConstructor
 @Document(collection = "query_log")
-@CompoundIndex(def = "{'key': 1, 'created_at': -1}", name = "key_createdAt_idx")
+@CompoundIndex(def = "{'key': 1, 'created_at': -1}", name = "key_createdAt_idx") // created_at 는 정렬 성능을 위해 역방향 인덱스 (쿼리 로그는 최신순부터 보통 조회됨!)
 public class QueryLog {
 
     @Id
