@@ -5,9 +5,11 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
 import org.springframework.data.mongodb.repository.config.EnableMongoRepositories;
 
+import static com.snailcatch.server.global.constants.PackageConstants.*;
+
 @Configuration
-@EnableMongoRepositories(basePackages = "com.snailcatch.server.domain.query_log")
-@EnableJpaRepositories(basePackages = "com.snailcatch.server.domain.api_key")
-@EntityScan(basePackages = "com.snailcatch.server.domain.api_key")
+@EnableMongoRepositories(basePackages = MONGO_REPOSITORY_PACKAGE)
+@EnableJpaRepositories(basePackages = JPA_REPOSITORY_PACKAGE)
+@EntityScan(basePackages = ENTITY_SCAN_PACKAGE)
 public class AppConfig {
 }

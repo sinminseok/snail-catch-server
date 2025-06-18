@@ -2,6 +2,7 @@ package com.snailcatch.server.domain.query_log.service;
 
 import com.snailcatch.server.domain.query_log.dto.QueryLogRequest;
 import com.snailcatch.server.domain.query_log.entity.QueryLog;
+import com.snailcatch.server.exception.custom.QueryLogDropException;
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -58,7 +59,7 @@ public class BufferedQueryLogService {
             QueryLog log = QueryLog.from(key, request);
             boolean added = buffer.offer(log);
             if (!added) {
-                System.err.println("Buffer full, dropping log: " + log);
+                throw new QueryLogDropException();
                 //todo 버려진 로그에 대한 처리
             }
         }
