@@ -23,7 +23,7 @@ public class QueryLogController {
     private final BufferedQueryLogService bufferedQueryLogService;
 
     @PostMapping
-    public ResponseEntity<?> saveLogs(@RequestBody final List<QueryLogRequest> queryLogRequest, @ApiKey String apiKey) {
+    public ResponseEntity<?> saveLogs(@RequestBody final List<QueryLogRequest> queryLogRequest, @ApiKey String apiKey) throws InterruptedException {
         bufferedQueryLogService.saveBufferedBatch(apiKey, queryLogRequest);
         SuccessResponse response = new SuccessResponse(true, "쿼리 로그 저장 성공", null);
         return new ResponseEntity<>(response, HttpStatus.OK);
