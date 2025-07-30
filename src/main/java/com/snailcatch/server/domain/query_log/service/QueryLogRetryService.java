@@ -4,6 +4,7 @@ import com.snailcatch.server.domain.query_log.entity.QueryLog;
 import com.snailcatch.server.exception.custom.QueryLogSaveException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.mongodb.core.MongoTemplate;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.retry.annotation.Backoff;
 import org.springframework.retry.annotation.Recover;
 import org.springframework.retry.annotation.Retryable;
@@ -18,6 +19,8 @@ import java.util.List;
 @RequiredArgsConstructor
 public class QueryLogRetryService {
 
+    private final RedisTemplate<String, Object> redisTemplate;
+    private static final String QUEUE_KEY = "failed:queryLogs";
     private final MongoTemplate mongoTemplate;
 
     private static final int MAX_RETRY = 3;
@@ -29,7 +32,7 @@ public class QueryLogRetryService {
 
     @Recover
     public void recover(Exception e, List<QueryLog> logs) {
-        // 재시도 실패 시 처리 로컬 파일 저장, Kafka 전송, Redis 적재등 뭔가 처리하긴 해야될듯..
+        // 재시도 실패 시 뭔가 처리하긴 해야될듯..
         // 예시로 커스텀 예외 던지기
         throw new QueryLogSaveException();
     }

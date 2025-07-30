@@ -40,7 +40,6 @@ public class BufferedQueryLogService {
                 QueryLog log = buffer.take();
                 batch.add(log);
                 buffer.drainTo(batch, BATCH_SIZE - 1);
-
                 if (!batch.isEmpty()) {
                     saveLogsAsync(new ArrayList<>(batch));
                     batch.clear();

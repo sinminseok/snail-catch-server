@@ -33,7 +33,7 @@ services:
     ports:
       - "3200:3200"
     volumes:
-      - ./monitoring-config/tempo-config.yml:/etc/tempo-config.yml
+      - ./monitoring-config/tempo-config.yml:/etc/tempo/tempo-config.yml
     command: --config.file=/etc/tempo-config.yml
     networks:
       - monitoring
@@ -94,6 +94,16 @@ services:
     volumes:
       - grafana-storage:/var/lib/grafana
 
+  redis:
+    image: redis:7.2
+    container_name: redis
+    ports:
+      - "6379:6379"
+    networks:
+      - monitoring
+    volumes:
+      - redis-data:/data
+    restart: always
 
   snail-app-1:
     image: minseok1768/snail-app:latest
@@ -105,6 +115,7 @@ services:
     restart: always
     networks:
       - monitoring
+      - redis
 
   snail-app-2:
     image: minseok1768/snail-app:latest
@@ -116,6 +127,7 @@ services:
     restart: always
     networks:
       - monitoring
+      - redis
 
   nginx:
     image: nginx:latest
@@ -138,3 +150,4 @@ networks:
 volumes:
   grafana-storage:
   influxdb-storage:
+  redis-data:
