@@ -4,6 +4,7 @@ import com.snailcatch.server.domain.query_log.dto.QueryLogCursorResponse;
 import com.snailcatch.server.domain.query_log.dto.QueryLogRequest;
 import com.snailcatch.server.domain.query_log.service.BufferedQueryLogService;
 import com.snailcatch.server.domain.query_log.service.QueryLogService;
+import com.snailcatch.server.exception.custom.QueryLogDropException;
 import com.snailcatch.server.global.dto.SuccessResponse;
 import com.snailcatch.server.global.annotation.ApiKey;
 import lombok.RequiredArgsConstructor;
@@ -23,11 +24,12 @@ public class QueryLogController {
     private final BufferedQueryLogService bufferedQueryLogService;
 
     @PostMapping
-    public ResponseEntity<?> saveLogs(@RequestBody final List<QueryLogRequest> queryLogRequest, @ApiKey String apiKey) {
+    public ResponseEntity<?> saveLogs(@RequestBody final List<QueryLogRequest> queryLogRequest, @ApiKey String apiKey) throws InterruptedException {
         bufferedQueryLogService.saveBufferedBatch(apiKey, queryLogRequest);
         SuccessResponse response = new SuccessResponse(true, "쿼리 로그 저장 성공", null);
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
+
 
     @GetMapping("/cursor")
     public ResponseEntity<?> findByCursor(

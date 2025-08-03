@@ -1,6 +1,19 @@
 version: '3.7'
 
 services:
+  snail-app-1:
+    build:
+      context: ../  # 상위 디렉토리를 빌드 컨텍스트로 설정
+      dockerfile: Dockerfile
+    container_name: snail-app-1
+    env_file:
+      - ../.env     # 상위 디렉토리의 .env 파일 지정
+    ports:
+      - "8080:8080"
+    restart: always
+    networks:
+      - monitoring
+
   node-exporter:
     image: prom/node-exporter:latest
     container_name: node-exporter
@@ -31,7 +44,7 @@ services:
     image: grafana/tempo:2.4.1
     container_name: tempo
     ports:
-      - "3200:3200"    # 메트릭, 상태 확인 등
+      - "3200:3200"
 
     volumes:
       - ./tempo/tempo-config.yml:/etc/tempo-config.yml
@@ -43,9 +56,9 @@ services:
     image: otel/opentelemetry-collector-contrib:0.93.0
     container_name: otel-collector
     ports:
-      - "4317:4317"  # OTLP gRPC 수신 포트 (애플리케이션이 Collector로 보낼 때 사용)
-      - "4318:4318"  # HTTP 수신 포트
-      - "8889:8889"  # Prometheus metrics endpoint (ex: /metrics)
+      - "4317:4317"
+      - "4318:4318"
+      - "8889:8889"
     volumes:
       - ./otel/otel-collector-config.yml:/etc/otel/otel-collector-config.yml
     command: --config=/etc/otel/otel-collector-config.yml
@@ -54,16 +67,16 @@ services:
     depends_on:
       - tempo
 
-  loki:
-    image: grafana/loki:2.9.4
-    container_name: loki
-    ports:
-      - "3100:3100"
-    command: -config.file=/etc/loki/local-config.yml
-    volumes:
-      - ./loki/loki-config.yml:/etc/loki/local-config.yml
-    networks:
-      - monitoring
+#  loki:
+#    image: grafana/loki:2.9.4
+#    container_name: loki
+#    ports:
+#      - "3100:3100"
+#    command: -config.file=/etc/loki/local-config.yml
+#    volumes:
+#      - ./loki/loki-config.yml:/etc/loki/local-config.yml
+#    networks:
+#      - monitoring
 
   prometheus:
     image: prom/prometheus
@@ -85,25 +98,11 @@ services:
       - GF_SECURITY_ADMIN_PASSWORD=admin
     depends_on:
       - prometheus
-      - loki
+#      - loki
     networks:
       - monitoring
     volumes:
       - grafana-storage:/var/lib/grafana
-
-  promtail:
-    image: grafana/promtail:2.9.4
-    container_name: promtail
-    command: -config.file=/etc/promtail/config.yml
-    ports:
-      - "9080:9080"
-    volumes:
-      - ./loki/promtail-config.yml:/etc/promtail/config.yml
-      - /Users/sinminseok12/Desktop/Ticket-on/ticketon/logs:/var/log
-    depends_on:
-      - loki
-    networks:
-      - monitoring
 
 networks:
   monitoring:

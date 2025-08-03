@@ -26,16 +26,12 @@ public class CustomQueryLogRepositoryImpl implements CustomQueryLogRepository {
     public QueryLogCursorResponse findLogsByCursor(String key, LocalDateTime cursorCreatedAt, int size) {
         Query query = buildQuery(key, cursorCreatedAt, size + 1);
         List<QueryLog> logs = mongoTemplate.find(query, QueryLog.class);
-
         boolean hasNext = logs.size() > size;
-
         if (hasNext) {
             logs.remove(size); // 페이징 커서 처리용 마지막 항목 제거
         }
-
         List<QueryLogResponse> content = convertToResponseList(logs);
         LocalDateTime nextCursor = extractNextCursor(logs, hasNext);
-
         return new QueryLogCursorResponse(content, hasNext, nextCursor);
     }
 

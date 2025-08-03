@@ -46,8 +46,8 @@ bootRun {
 bootRun.dependsOn("copyAgent")
 
 dependencies {
-
 	agent 'io.opentelemetry.javaagent:opentelemetry-javaagent:2.7.0'
+	implementation 'org.springframework.boot:spring-boot-starter-data-redis'
 	implementation 'io.lettuce:lettuce-core'
 	implementation 'io.micrometer:micrometer-core'
 	implementation 'io.opentelemetry:opentelemetry-api:1.50.0'
@@ -58,9 +58,6 @@ dependencies {
 	implementation 'org.springframework.boot:spring-boot-starter-actuator'
 	implementation 'io.micrometer:micrometer-registry-prometheus'
 	implementation 'com.github.vertical-blank:sql-formatter:2.0.3'
-
-	implementation 'com.github.loki4j:loki-logback-appender:1.4.0'
-
 	implementation 'org.springframework.boot:spring-boot-starter-thymeleaf'
 	implementation 'io.jsonwebtoken:jjwt-api:0.11.5'
 	runtimeOnly 'io.jsonwebtoken:jjwt-impl:0.11.5'
@@ -74,6 +71,8 @@ dependencies {
 	annotationProcessor 'org.projectlombok:lombok'
 	testImplementation 'org.springframework.boot:spring-boot-starter-test'
 	testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+	implementation 'org.springframework.retry:spring-retry'
+	implementation 'org.springframework:spring-aspects'
 }
 
 tasks.register("copyAgent", Copy) {

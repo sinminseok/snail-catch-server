@@ -1,0 +1,100 @@
+spring:
+  application:
+    name: "snail-catch"
+  config:
+    import: "optional:file:.env[.properties]"
+  thymeleaf:
+    prefix: classpath:/templates/
+    suffix: .html
+    mode: HTML
+    cache: false
+  datasource:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: ${DB_URL}
+    username: ${DB_USER_NAME}
+    password: ${DB_PASSWORD}
+    hikari:
+      maximum-pool-size: 100
+      minimum-idle: 10
+      idle-timeout: 600000
+      max-lifetime: 1800000
+      connection-timeout: 30000
+      validation-timeout: 5000
+      initialization-fail-timeout: 1
+      read-only: false
+      leak-detection-threshold: 0
+  sql:
+    init:
+      mode: always
+
+  jpa:
+    hibernate:
+      ddl-auto: none
+      database-platform: org.hibernate.dialect.MySQLDialect
+      defer-datasource-initialization: true
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.MySQLDialect
+        show_sql: false
+        format_sql: false
+
+  data:
+    mongodb:
+      uri: ${MONGO_DB_URL}
+      database: ${MONGO_DB_NAME}
+      auto-index-creation: true
+
+redis:
+  host: redis
+  port: 6379
+
+jwt:
+  secret: ${SECRET_KEY}
+  access-key-expiration-s: ${ACCESS_KEY_EXPIRATION_SECONDS}
+  refresh-key-expiration-s: ${REFRESH_KEY_EXPIRATION_SECONDS}
+
+management:
+  metrics:
+    export:
+      otlp:
+        enabled: true
+        endpoint: http://otel-collector:4318
+    enable:
+      all: true
+      jvm: true
+  endpoints:
+    web:
+      exposure:
+        include: "*"
+    prometheus:
+      enabled: true
+
+otel:
+  resource:
+    attributes:
+      service.name: snail-service
+  exporter:
+    otlp:
+      url: http://otel-collector:4317
+      protocol: grpc
+
+logging:
+  level:
+    root: WARN
+    io.opentelemetry: WARN
+    io.opentelemetry.sdk: WARN
+    io.opentelemetry.exporter: WARN
+    io.micrometer: WARN
+
+server:
+  tomcat:
+    threads:
+      max: 500
+      min-spare: 10
+      max-queue-capacity: 2147483647
+    max-connections: 10000
+    accept-count: 100
+    connection-timeout: 60000
+    keep-alive-timeout: 30000
+    max-http-header-size: 8192
+    max-keep-alive-requests: 100

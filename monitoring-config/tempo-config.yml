@@ -24,11 +24,8 @@ ingester:
   max_block_duration: 5m
 
 compactor:
-  compaction:
-    retention_enabled: true
-    retention_delete_delay: 24h
-    retention_delete_interval: 1h
-    retention: 140h
+  compaction_window: 1h
+  retention_period: 140h
 
 storage:
   trace:
