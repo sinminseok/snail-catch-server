@@ -2,7 +2,6 @@ package com.snailcatch.server.domain.query_log.service;
 
 import com.snailcatch.server.domain.query_log.dto.QueryLogRequest;
 import com.snailcatch.server.domain.query_log.entity.QueryLog;
-import com.snailcatch.server.exception.custom.QueryLogDropException;
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import org.springframework.scheduling.annotation.Async;
@@ -25,6 +24,13 @@ public class BufferedQueryLogService {
     private static final int BATCH_SIZE = 5000;
     private static final int CONSUMER_COUNT = 36;
 
+    public void saveBufferedBatch(final String key, List<QueryLogRequest> requests) throws InterruptedException {
+        for (QueryLogRequest request : requests) {
+            QueryLog log = QueryLog.from(key, request);
+            buffer.put(log);
+        }
+    }
+
     @PostConstruct
     public void init() {
         ExecutorService executor = Executors.newFixedThreadPool(CONSUMER_COUNT);
@@ -35,34 +41,37 @@ public class BufferedQueryLogService {
 
     private void consumeLogs() {
         List<QueryLog> batch = new ArrayList<>(BATCH_SIZE);
-        while (true) {
+        while (!Thread.currentThread().isInterrupted()) {
             try {
-                QueryLog log = buffer.take();
-                batch.add(log);
-                buffer.drainTo(batch, BATCH_SIZE - 1);
+                fillBatch(batch);
                 if (!batch.isEmpty()) {
-                    saveLogsAsync(new ArrayList<>(batch));
-                    batch.clear();
+                    processBatch(batch);
                 }
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
-                break;
             } catch (Exception e) {
-                e.printStackTrace();
-                batch.clear();
+                handleConsumptionError(e, batch);
             }
         }
     }
 
-    public void saveBufferedBatch(String key, List<QueryLogRequest> requests) throws InterruptedException {
-        for (QueryLogRequest request : requests) {
-            QueryLog log = QueryLog.from(key, request);
-            buffer.put(log);
-        }
+    private void fillBatch(List<QueryLog> batch) throws InterruptedException {
+        QueryLog log = buffer.take();
+        batch.add(log);
+        buffer.drainTo(batch, BATCH_SIZE - 1);
     }
 
+    private void processBatch(List<QueryLog> batch) {
+        saveLogsAsync(new ArrayList<>(batch));
+        batch.clear();
+    }
+
+    private void handleConsumptionError(Exception e, List<QueryLog> batch) {
+        e.printStackTrace();
+        batch.clear();
+    }
     @Async("queryLogExecutor")
-    public void saveLogsAsync(List<QueryLog> logs) {
+    private void saveLogsAsync(List<QueryLog> logs) {
         queryLogRetryService.retryInsert(logs);
     }
 }
